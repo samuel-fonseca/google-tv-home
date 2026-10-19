@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -80,6 +81,9 @@ final class Ui {
         label.setGravity(Gravity.CENTER);
         label.setShadowLayer(dp(ctx, 3), 0, dp(ctx, 1), 0xCC000000);
         label.setAlpha(0f);
+        // Text and shadow can take the fade's alpha separately; otherwise each frame of it renders
+        // the label offscreen first.
+        label.forceHasOverlappingRendering(false);
         // Same width as the card, so the label never pushes neighbouring tiles apart.
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(width, -2);
         lp.topMargin = dp(ctx, 12);
@@ -252,20 +256,19 @@ final class Ui {
         return new IconDrawable() {
             @Override void draw(Canvas c, float w, float h) {
                 float cx = w / 2, cy = h / 2, outer = w * 0.48f, body = w * 0.36f, hole = w * 0.15f;
-                Path p = new Path();
+                Path gear = new Path(), tooth = new Path();
+                Matrix turn = new Matrix();
                 for (int i = 0; i < 8; i++) {
-                    c.save();
-                    c.rotate(i * 45, cx, cy);
-                    c.drawRect(cx - w * 0.08f, cy - outer, cx + w * 0.08f, cy, paint);
-                    c.restore();
+                    tooth.reset();
+                    tooth.addRect(cx - w * 0.08f, cy - outer, cx + w * 0.08f, cy, Path.Direction.CW);
+                    turn.setRotate(i * 45, cx, cy);
+                    tooth.transform(turn);
+                    gear.op(tooth, Path.Op.UNION);
                 }
-                p.addCircle(cx, cy, body, Path.Direction.CW);
-                p.addCircle(cx, cy, hole, Path.Direction.CCW);
-                c.drawPath(p, paint);
-                // Punch the hole through the teeth too.
-                Paint clear = new Paint(Paint.ANTI_ALIAS_FLAG);
-                clear.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR));
-                c.drawCircle(cx, cy, hole, clear);
+                Path round = new Path();
+                round.addCircle(cx, cy, body, Path.Direction.CW);
+                gear.op(round, Path.Op.UNION);
+                c.drawPath(punch(gear, cx, cy, hole), paint);
             }
         };
     }
@@ -284,12 +287,12 @@ final class Ui {
                     point(p, false, cx, cy, body, a + Math.toRadians(20));
                 }
                 p.close();
-                paint.setPathEffect(new android.graphics.CornerPathEffect(w * 0.06f));
-                c.drawPath(p, paint);
-                paint.setPathEffect(null);
-                Paint clear = new Paint(Paint.ANTI_ALIAS_FLAG);
-                clear.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR));
-                c.drawCircle(cx, cy, w * 0.17f, clear);
+                // Round the corners into the outline itself, so the hole can be cut out of it.
+                Paint corners = new Paint();
+                corners.setPathEffect(new android.graphics.CornerPathEffect(w * 0.06f));
+                Path rounded = new Path();
+                corners.getFillPath(p, rounded);
+                c.drawPath(punch(rounded, cx, cy, w * 0.17f), paint);
             }
 
             private void point(Path p, boolean first, float cx, float cy, float r, double a) {
@@ -297,6 +300,17 @@ final class Ui {
                 if (first) p.moveTo(x, y); else p.lineTo(x, y);
             }
         };
+    }
+
+    /**
+     * {@code shape} with a round hole through its centre. Cut from the path rather than cleared
+     * after drawing, which would need an offscreen layer every time the icon is drawn.
+     */
+    private static Path punch(Path shape, float cx, float cy, float r) {
+        Path hole = new Path();
+        hole.addCircle(cx, cy, r, Path.Direction.CW);
+        shape.op(hole, Path.Op.DIFFERENCE);
+        return shape;
     }
 
     /** Bar and triangle pointing left: "previous track". */
@@ -359,7 +373,7 @@ final class Ui {
         abstract void draw(Canvas c, float w, float h);
 
         @Override public void draw(Canvas c) {
-            int save = c.saveLayer(null, null);
+            int save = c.save();
             c.translate(getBounds().left, getBounds().top);
             draw(c, getBounds().width(), getBounds().height());
             c.restoreToCount(save);

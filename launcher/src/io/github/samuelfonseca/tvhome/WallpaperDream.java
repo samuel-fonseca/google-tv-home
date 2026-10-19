@@ -133,6 +133,7 @@ public class WallpaperDream extends DreamService {
         final String[] w = walls.get(i);
         decoder.execute(() -> {
             Bitmap bmp = Wallpapers.decode(this, w[0]);
+            if (bmp != null) bmp.prepareToDraw(); // upload it now, not in the crossfade's first frame
             main.post(() -> {
                 if (bmp == null || root == null || !root.isAttachedToWindow()) return;
                 wall = i;
@@ -146,8 +147,7 @@ public class WallpaperDream extends DreamService {
                 front.setImageBitmap(bmp);
                 front.animate().alpha(1f).setDuration(FADE_MS).withEndAction(() -> {
                     back.setImageBitmap(bmp);
-                    front.setImageDrawable(null);
-                    front.setAlpha(0f);
+                    front.setAlpha(0f); // keeps the photo: emptying it would lay out again
                 }).start();
             });
         });

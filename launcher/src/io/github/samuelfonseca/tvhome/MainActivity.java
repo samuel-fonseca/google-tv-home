@@ -2,7 +2,6 @@ package io.github.samuelfonseca.tvhome;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
-import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -11,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
@@ -19,11 +19,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.view.Choreographer;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.HorizontalScrollView;
@@ -45,7 +45,10 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
     private static final long ROTATE_MS = 60_000;
     private static final long FADE_MS = 1_500;
-    private static final long SCROLL_MS = 350;
+    // The page scrolls on a spring, critically damped so it never overshoots: it eases in and out,
+    // and a press during a scroll bends it towards the new row instead of restarting it.
+    private static final float SCROLL_STIFFNESS = 500f;
+    private static final int DIM = 0x0A0C10; // the colour the photo darkens towards in the grid
     private static final int COLUMNS = 6; // dock cards and grid columns line up
     private static final String KEY_WALL = "wall";
 
@@ -54,7 +57,7 @@ public class MainActivity extends Activity {
     private final List<String[]> walls = new ArrayList<>(); // {resName, place, author, licence}
 
     private ImageView back, front;
-    private View dim;
+    private View topScrim, bottomScrim;
     private TextView place, credit;
     private ScrollView page;
     private LinearLayout content;
@@ -66,7 +69,9 @@ public class MainActivity extends Activity {
     private List<String> gridDock; // the dock the grid was built without
     private HorizontalScrollView dockScroll;
     private GridLayout grid;
-    private ObjectAnimator scroller;
+    private final Spring scroll = new Spring(SCROLL_STIFFNESS, 1f);
+    private boolean scrolling;
+    private long lastScrollFrame;
     private int scrollTarget;
     private NowPlaying nowPlaying;
     private AlertDialog dialog;
@@ -84,6 +89,17 @@ public class MainActivity extends Activity {
         }
     };
 
+    private final Choreographer.FrameCallback scrollFrame = new Choreographer.FrameCallback() {
+        @Override public void doFrame(long now) {
+            float dt = lastScrollFrame == 0 ? 1 / 60f : Math.min((now - lastScrollFrame) / 1e9f, 0.1f);
+            lastScrollFrame = now;
+            boolean moving = scroll.step(dt);
+            page.setScrollY(Math.round(scroll.value));
+            if (moving) Choreographer.getInstance().postFrameCallback(this);
+            else scrolling = false;
+        }
+    };
+
     private final BroadcastReceiver packagesChanged = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
             gridDock = null; // an app came or went: rebuild the grid too
@@ -95,6 +111,9 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         walls.addAll(Wallpapers.list(this));
         setContentView(buildLayout());
+        // The root paints black under the photo already; a window background too would fill the
+        // screen once more every frame.
+        getWindow().setBackgroundDrawable(null);
         getWindow().getDecorView().getViewTreeObserver()
                 .addOnGlobalFocusChangeListener((was, now) -> {
                     scrollFor(now);
@@ -118,10 +137,17 @@ public class MainActivity extends Activity {
         nowPlaying.start();
     }
 
-    /** Back from an app or All apps: the dock may have been edited there. */
+    /**
+     * Back from an app: an input may have been renamed in Settings. Nothing else needs a rebuild,
+     * which would reload every banner from its APK on the way back: apps that come, go or change
+     * are caught by packagesChanged, and dock edits in All apps by onResume.
+     */
     @Override protected void onRestart() {
         super.onRestart();
-        buildDock();
+        if (inputRenamed()) {
+            gridDock = null;
+            buildDock();
+        }
     }
 
     // All apps is translucent, so this activity only pauses behind it and onRestart doesn't run.
@@ -140,6 +166,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        Choreographer.getInstance().removeFrameCallback(scrollFrame);
         unregisterReceiver(packagesChanged);
         decoder.shutdownNow();
         nowPlaying.destroy();
@@ -172,17 +199,12 @@ public class MainActivity extends Activity {
             root.addView(iv, new FrameLayout.LayoutParams(-1, -1));
         }
 
-        // Soft scrims so text and the dock stay legible on bright photos.
-        root.addView(scrim(GradientDrawable.Orientation.TOP_BOTTOM, 0x99000000),
-                new FrameLayout.LayoutParams(-1, Ui.dp(this, 170), Gravity.TOP));
-        root.addView(scrim(GradientDrawable.Orientation.BOTTOM_TOP, 0xB3000000),
-                new FrameLayout.LayoutParams(-1, Ui.dp(this, 230), Gravity.BOTTOM));
-
-        // Darkens the photo as the page scrolls down to the grid.
-        dim = new View(this);
-        dim.setBackgroundColor(0xFF0A0C10);
-        dim.setAlpha(0f);
-        root.addView(dim, new FrameLayout.LayoutParams(-1, -1));
+        // Soft scrims so text and the dock stay legible on bright photos. They fade out as the
+        // page scrolls down to the grid, where the photo itself darkens (see onScroll).
+        topScrim = scrim(GradientDrawable.Orientation.TOP_BOTTOM, 0x99000000);
+        root.addView(topScrim, new FrameLayout.LayoutParams(-1, Ui.dp(this, 170), Gravity.TOP));
+        bottomScrim = scrim(GradientDrawable.Orientation.BOTTOM_TOP, 0xB3000000);
+        root.addView(bottomScrim, new FrameLayout.LayoutParams(-1, Ui.dp(this, 230), Gravity.BOTTOM));
 
         // Everything else scrolls: the first screen, then the grid. We scroll it ourselves (see
         // scrollFor), so focus moves don't also nudge it.
@@ -197,13 +219,7 @@ public class MainActivity extends Activity {
         };
         page.setVerticalScrollBarEnabled(false);
         page.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        page.setOnScrollChangeListener((v, x, y, oldX, oldY) -> {
-            float p = Math.min(1f, y / (float) Math.max(1, gridScroll()));
-            dim.setAlpha(p * 0.85f);
-            bandBg.setAlpha(Math.round(255 * (1 - p))); // in the grid the dock is just the top row
-            nowPlaying.setAlpha(1 - p); // it sits just above the dock, so it would peek in at the top
-            backdrop.redraw(); // the panels moved over the wallpaper
-        });
+        page.setOnScrollChangeListener((v, x, y, oldX, oldY) -> onScroll(y));
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setClipChildren(false);
@@ -212,12 +228,10 @@ public class MainActivity extends Activity {
 
         // One glass frame over the tiles that springs to whichever has focus (see followFocus).
         // In the page's overlay, so it scrolls with the page and draws over the cards.
-        highlight = new Highlight(Ui.dp(this, 10) * Ui.FOCUS_SCALE, Ui.dp(this, 1), Ui.dp(this, 6));
+        highlight = new Highlight(this, Ui.dp(this, 10) * Ui.FOCUS_SCALE, Ui.dp(this, 1), Ui.dp(this, 6));
         content.getOverlay().add(highlight);
-        content.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            highlight.setBounds(0, 0, r - l, b - t);
-            followFocus(getCurrentFocus()); // tiles may have moved
-        });
+        content.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
+                followFocus(getCurrentFocus())); // tiles may have moved
 
         int margin = Ui.dp(this, 48);
         int screen = getResources().getDisplayMetrics().heightPixels;
@@ -381,6 +395,7 @@ public class MainActivity extends Activity {
         for (Apps.App app : Apps.all(this)) {
             if (gridDock.contains(app.pkg)) continue;
             View tile = Ui.appCard(this, app, width, true);
+            tile.setTag(app.pkg);
             tile.setOnClickListener(v -> {
                 Bundle opts = ActivityOptions.makeScaleUpAnimation(
                         v, 0, 0, v.getWidth(), v.getHeight()).toBundle();
@@ -408,6 +423,20 @@ public class MainActivity extends Activity {
         }
         int n = grid.getChildCount();
         if (n > 0) Ui.endOfRow(grid.getChildAt(n - 1), View.FOCUS_RIGHT); // a short last row
+    }
+
+    /** Whether a TV input on screen has a new name from Settings > Inputs, or is gone. */
+    private boolean inputRenamed() {
+        for (ViewGroup row : new ViewGroup[] {dock, grid}) {
+            for (int i = 0; i < row.getChildCount(); i++) {
+                View tile = row.getChildAt(i);
+                String pkg = (String) tile.getTag();
+                if (pkg == null || !pkg.startsWith(Apps.INPUT)) continue;
+                Apps.App app = Apps.get(this, pkg); // cheap for an input: no APK to open
+                if (app == null || !app.label.contentEquals(tile.getContentDescription())) return true;
+            }
+        }
+        return false;
     }
 
     private void addToDock(Apps.App app) {
@@ -480,10 +509,31 @@ public class MainActivity extends Activity {
         }
         if (target == scrollTarget) return;
         scrollTarget = target;
-        if (scroller != null) scroller.cancel();
-        scroller = ObjectAnimator.ofInt(page, "scrollY", target).setDuration(SCROLL_MS);
-        scroller.setInterpolator(new DecelerateInterpolator(2f));
-        scroller.start();
+        if (!scrolling) scroll.snap(page.getScrollY()); // from rest; mid-scroll keeps its speed
+        scroll.target = target;
+        if (scrolling) return;
+        scrolling = true;
+        lastScrollFrame = 0;
+        Choreographer.getInstance().postFrameCallback(scrollFrame);
+    }
+
+    /**
+     * Down the page towards the grid, the photo darkens, and the dock's band and the now-playing
+     * card fade away. The darkening is a colour filter on the photo, which costs nothing extra to
+     * draw; a dark view over it would cover the whole screen with another layer.
+     */
+    private void onScroll(int y) {
+        float p = Math.min(1f, y / (float) Math.max(1, gridScroll()));
+        int dim = Math.round(255 * p * 0.85f);
+        for (ImageView iv : new ImageView[] {back, front}) {
+            if (dim == 0) iv.clearColorFilter();
+            else iv.setColorFilter(dim << 24 | DIM, PorterDuff.Mode.SRC_ATOP);
+        }
+        topScrim.setAlpha(1 - p);
+        bottomScrim.setAlpha(1 - p);
+        bandBg.setAlpha(Math.round(255 * (1 - p))); // in the grid the dock is just the top row
+        nowPlaying.setAlpha(1 - p); // it sits just above the dock, so it would peek in at the top
+        backdrop.redraw(); // the panels moved over the wallpaper
     }
 
     /** The highlight springs to a focused tile, and fades out anywhere else. */
@@ -532,6 +582,11 @@ public class MainActivity extends Activity {
         decoder.execute(() -> {
             Bitmap bmp = Wallpapers.decode(this, w[0]);
             Bitmap blurred = bmp == null ? null : Glass.Backdrop.blur(bmp);
+            if (bmp != null) {
+                // Upload to the GPU now, rather than in the first frame of the crossfade.
+                bmp.prepareToDraw();
+                blurred.prepareToDraw();
+            }
             main.post(() -> {
                 if (isDestroyed() || bmp == null) return;
                 backdrop.set(blurred, fade ? FADE_MS : 0);
@@ -547,7 +602,8 @@ public class MainActivity extends Activity {
                 front.setImageBitmap(bmp);
                 front.animate().alpha(1f).setDuration(FADE_MS).withEndAction(() -> {
                     back.setImageBitmap(bmp);
-                    front.setImageDrawable(null);
+                    // Hidden, but keeps the photo (the same bitmap as back's): emptying it would
+                    // change its size and lay out the whole page again.
                     front.setAlpha(0f);
                 }).start();
             });
@@ -562,6 +618,7 @@ public class MainActivity extends Activity {
     private View scrim(GradientDrawable.Orientation o, int color) {
         View v = new View(this);
         v.setBackground(new GradientDrawable(o, new int[] {color, 0x00000000}));
+        v.forceHasOverlappingRendering(false); // so fading it doesn't draw it offscreen first
         return v;
     }
 }

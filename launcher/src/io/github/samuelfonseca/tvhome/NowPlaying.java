@@ -93,6 +93,9 @@ final class NowPlaying extends LinearLayout {
         int pad = Ui.dp(ctx, 16);
         setPadding(pad, pad, pad, pad);
         setBackground(background);
+        // It fades as the page scrolls to the grid. Taking the alpha draw by draw, rather than
+        // drawing the whole card offscreen each frame, looks the same on a fade that quick.
+        forceHasOverlappingRendering(false);
 
         art = new ImageView(ctx);
         art.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -288,6 +291,7 @@ final class NowPlaying extends LinearLayout {
         final String pkg = controller.getPackageName();
         loader.execute(() -> {
             Bitmap loaded = load(src);
+            if (loaded != null) loaded.prepareToDraw(); // upload it here, not on the next frame
             main.post(() -> {
                 if (!Objects.equals(artKey, src)) return; // the track changed meanwhile
                 if (loaded != null) art.setImageBitmap(loaded);

@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.samuelfonseca.tvhome"
-    android:versionCode="7"
-    android:versionName="1.6">
+    android:versionCode="8"
+    android:versionName="1.7">
 
     <!-- build.sh passes the same values to aapt2; declared here too so Android Lint sees them. -->
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />

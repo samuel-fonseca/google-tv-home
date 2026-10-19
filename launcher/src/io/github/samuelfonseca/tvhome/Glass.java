@@ -2,12 +2,13 @@ package io.github.samuelfonseca.tvhome;
 
 import android.animation.ValueAnimator;
 import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -25,26 +26,28 @@ import java.util.List;
  * lined up with the screen (see {@link Backdrop}).
  */
 final class Glass extends Drawable {
+    // Smoky glass: the blur shaded, so the photo shows through faintly, with a trace of lift.
+    // Laid into the blurred wallpaper once per photo (see Backdrop.blur) rather than drawn over
+    // it every frame.
+    private static final int SHADE = 0x70000000, TINT = 0x08FFFFFF;
+
     private final Backdrop backdrop;
     private final float radius, edge;
-    private final Paint image = new Paint(Paint.FILTER_BITMAP_FLAG);
-    private final Paint shade = new Paint();
-    private final Paint tint = new Paint();
-    private final Paint gloss = new Paint();
+    private final Paint image = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint gloss = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path clip = new Path();
     private final RectF box = new RectF();
-    private final RectF screen = new RectF();
+    private final Matrix place = new Matrix();
     private final int[] where = new int[2];
+    private Bitmap shaderCurrent, shaderPrevious; // what the two shaders below show
+    private BitmapShader current, previous;
     private int alpha = 255;
 
     Glass(Backdrop backdrop, float radius, float edge) {
         this.backdrop = backdrop;
         this.radius = radius;
         this.edge = edge;
-        // Dark, smoky glass: the blur mostly shaded, with a trace of lift.
-        shade.setColor(0x8C000000);
-        tint.setColor(0x08FFFFFF);
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(edge);
         // Softened, so the edge blends into the glass rather than outlining it.
@@ -53,8 +56,6 @@ final class Glass extends Drawable {
 
     @Override protected void onBoundsChange(Rect b) {
         box.set(b);
-        clip.reset();
-        clip.addRoundRect(box, radius, radius, Path.Direction.CW);
         gloss.setShader(new LinearGradient(0, b.top, 0, b.top + b.height() * 0.5f,
                 0x24FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
         // Brightest top-left, faint through the middle, a little light again bottom-right.
@@ -63,36 +64,59 @@ final class Glass extends Drawable {
                 Shader.TileMode.CLAMP));
     }
 
+    /**
+     * Each part is a round rect with the panel's alpha in its paint: no clip, and no offscreen
+     * layer, which on the TV's GPU costs more than the panel itself. The one exception is a
+     * crossfade while the panel fades, where the old photo would show through the new one.
+     */
     @Override public void draw(Canvas c) {
         if (alpha == 0) return;
-        int save = alpha < 255 ? c.saveLayerAlpha(box, alpha) : c.save();
-        c.clipPath(clip);
         View host = getCallback() instanceof View ? (View) getCallback() : null;
-        if (host != null && backdrop.current != null) {
+        boolean photo = host != null && backdrop.current != null;
+        boolean crossfading = photo && backdrop.previous != null && backdrop.fade < 1;
+        boolean layer = crossfading && alpha < 255;
+        int save = layer ? c.saveLayerAlpha(box, alpha) : -1;
+        int a = layer ? 255 : alpha;
+        if (photo) {
             // The blurred wallpaper, placed where the real one is on screen.
             View root = host.getRootView();
             host.getLocationInWindow(where);
-            screen.set(-where[0], -where[1], root.getWidth() - where[0], root.getHeight() - where[1]);
-            if (backdrop.previous != null && backdrop.fade < 1) {
-                image.setAlpha(255);
-                c.drawBitmap(backdrop.previous, null, screen, image);
+            Bitmap now = backdrop.current;
+            place.setScale(root.getWidth() / (float) now.getWidth(), root.getHeight() / (float) now.getHeight());
+            place.postTranslate(-where[0], -where[1]);
+            if (crossfading) {
+                if (shaderPrevious != backdrop.previous) previous = shader(shaderPrevious = backdrop.previous);
+                drawImage(c, previous, a);
             }
-            image.setAlpha(Math.round(255 * backdrop.fade));
-            c.drawBitmap(backdrop.current, null, screen, image);
+            if (shaderCurrent != now) current = shader(shaderCurrent = now);
+            drawImage(c, current, Math.round(a * backdrop.fade));
         } else {
-            c.drawColor(0x40000000);
+            for (int color : new int[] {0x40000000, SHADE, TINT}) {
+                fill.setColor(color);
+                fill.setAlpha(Math.round((color >>> 24) * a / 255f));
+                c.drawRoundRect(box, radius, radius, fill);
+            }
         }
-        c.drawRect(box, shade);
-        c.drawRect(box, tint);
-        c.drawRect(box, gloss);
-        c.restoreToCount(save);
+        gloss.setAlpha(a);
+        c.drawRoundRect(box, radius, radius, gloss);
+        if (layer) c.restoreToCount(save);
 
         float o = edge / 2;
         box.inset(o, o);
-        int s = alpha < 255 ? c.saveLayerAlpha(null, alpha) : -1;
+        rim.setAlpha(alpha);
         c.drawRoundRect(box, radius - o, radius - o, rim);
-        if (s >= 0) c.restoreToCount(s);
         box.inset(-o, -o);
+    }
+
+    private static BitmapShader shader(Bitmap b) {
+        return new BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+    }
+
+    private void drawImage(Canvas c, BitmapShader s, int a) {
+        s.setLocalMatrix(place);
+        image.setShader(s);
+        image.setAlpha(a);
+        c.drawRoundRect(box, radius, radius, image);
     }
 
     @Override public void setAlpha(int a) {
@@ -118,13 +142,15 @@ final class Glass extends Drawable {
             panels.add(v);
         }
 
-        /** A small, blurred copy of {@code wallpaper}. Slow-ish: call it off the main thread. */
+        /** A small, blurred, shaded copy of {@code wallpaper}. Slow-ish: call it off the main thread. */
         static Bitmap blur(Bitmap wallpaper) {
             int w = Math.max(1, wallpaper.getWidth() / SHRINK), h = Math.max(1, wallpaper.getHeight() / SHRINK);
             Bitmap small = Bitmap.createScaledBitmap(wallpaper, w, h, true);
             int[] px = new int[w * h];
             small.getPixels(px, 0, w, 0, 0, w, h);
-            Blur.box(px, w, h, 3, 3);
+            Blur.box(px, w, h, 2, 3); // soft, but the shapes behind still read through
+            Blur.over(px, SHADE);
+            Blur.over(px, TINT);
             Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             out.setPixels(px, 0, w, 0, 0, w, h);
             if (small != wallpaper) small.recycle();

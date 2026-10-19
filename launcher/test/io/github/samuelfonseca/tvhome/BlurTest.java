@@ -49,4 +49,29 @@ class BlurTest {
         assertTrue(red(px[3 * w + 4]) > 0, "spread to the row above");
         assertEquals(red(px[3 * w + 0]), red(px[3 * w + 8]), "symmetric along the line");
     }
+
+    @Test void overMixesInTheColourByItsAlpha() {
+        int[] px = {0xFFFFFFFF, 0xFF000000, 0xFF804020};
+        Blur.over(px, 0x80000000); // half black
+        assertEquals(0xFF7F7F7F, px[0]);
+        assertEquals(0xFF000000, px[1]);
+        assertEquals(0xFF402010, px[2]);
+        Blur.over(px, 0x00FFFFFF); // fully transparent: no change
+        assertEquals(0xFF402010, px[2]);
+        Blur.over(px, 0xFFFFFFFF); // opaque white covers it
+        assertEquals(0xFFFFFFFF, px[2]);
+    }
+
+    @Test void glowIsOutsideTheShapeOnly() {
+        int w = 30, h = 30;
+        int[] px = new int[w * h];
+        for (int y = 10; y < 20; y++) for (int x = 10; x < 20; x++) px[y * w + x] = 0xFFFFFFFF;
+        Blur.glow(px, w, h, 2, 0x40FFFFFF);
+        assertEquals(0, px[15 * w + 15] >>> 24, "nothing inside the shape");
+        int edge = px[15 * w + 9] >>> 24, further = px[15 * w + 6] >>> 24;
+        assertTrue(edge > further && further > 0, edge + " " + further);
+        assertTrue(edge <= 0x40, "never brighter than the colour's alpha: " + edge);
+        assertEquals(0, px[0] >>> 24, "fades out before the corner");
+        assertEquals(0xFFFFFF, px[15 * w + 9] & 0xFFFFFF, "in the glow's colour");
+    }
 }

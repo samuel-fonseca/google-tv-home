@@ -1,8 +1,9 @@
 package io.github.samuelfonseca.tvhome;
 
 /**
- * Box blur on ARGB pixels, run on a small thumbnail of the wallpaper for the glass panels.
- * Three passes look close to a Gaussian. Plain Java, so the tests run without Android.
+ * Box blur on ARGB pixels: a small thumbnail of the wallpaper for the glass panels (with the
+ * glass's tint laid over it), and the focus highlight's halo. Three passes look close to a
+ * Gaussian. Plain Java, so the tests run without Android.
  */
 final class Blur {
     private Blur() {}
@@ -38,6 +39,38 @@ final class Blur {
                 g += ((add >> 8) & 0xFF) - ((drop >> 8) & 0xFF);
                 b += (add & 0xFF) - (drop & 0xFF);
             }
+        }
+    }
+
+    /**
+     * Lays the translucent {@code color} over each opaque pixel of {@code px} in place, as
+     * drawing it on top would.
+     */
+    static void over(int[] px, int color) {
+        int a = color >>> 24, keep = 255 - a;
+        int r = ((color >> 16) & 0xFF) * a, g = ((color >> 8) & 0xFF) * a, b = (color & 0xFF) * a;
+        for (int i = 0; i < px.length; i++) {
+            int c = px[i];
+            px[i] = 0xFF000000
+                    | (((c >> 16) & 0xFF) * keep + r + 127) / 255 << 16
+                    | (((c >> 8) & 0xFF) * keep + g + 127) / 255 << 8
+                    | ((c & 0xFF) * keep + b + 127) / 255;
+        }
+    }
+
+    /**
+     * Turns the shape in {@code px} (its alpha) into a soft glow of {@code color} around it, like
+     * an outer blur: the shape blurred by three box passes of {@code radius}, with nothing left
+     * where the shape itself was.
+     */
+    static void glow(int[] px, int w, int h, int radius, int color) {
+        int[] shape = new int[px.length];
+        for (int i = 0; i < px.length; i++) shape[i] = px[i] >>> 24;
+        box(px, w, h, radius, 3);
+        int a = color >>> 24, rgb = color & 0xFFFFFF;
+        for (int i = 0; i < px.length; i++) {
+            int outside = (px[i] >>> 24) * (255 - shape[i]) / 255;
+            px[i] = (outside * a / 255) << 24 | rgb;
         }
     }
 
