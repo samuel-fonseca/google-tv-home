@@ -6,13 +6,16 @@ on:
   pull_request:
   schedule:
     - cron: "23 6 * * 1" # Mondays, for newly published queries
+  workflow_dispatch: # Run workflow button in the Actions tab
 
 permissions:
   contents: read
 
 jobs:
   analyze:
-    name: Analyze (${{ matrix.language }})
+    # GitHub appends the matrix language: "Analyze (java-kotlin)", "Analyze (actions)". These
+    # names are required checks in the main ruleset, so keep them in sync if this changes.
+    name: Analyze
     # Code scanning needs a public repo (or GitHub Advanced Security); skipped while private.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
