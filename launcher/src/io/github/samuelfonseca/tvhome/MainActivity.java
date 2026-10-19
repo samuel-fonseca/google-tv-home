@@ -355,8 +355,15 @@ public class MainActivity extends Activity {
             if (dock.getChildCount() > 0) lp.leftMargin = gap;
             dock.addView(tile, lp);
         }
+        // The dock's ends stop the remote: when it fits without scrolling, Android would otherwise
+        // search the whole screen and land on a grid tile or a top button.
+        int n = dock.getChildCount();
+        if (n > 0) {
+            Ui.endOfRow(dock.getChildAt(0), View.FOCUS_LEFT);
+            Ui.endOfRow(dock.getChildAt(n - 1), View.FOCUS_RIGHT);
+        }
         if (!shownDock.equals(gridDock)) buildGrid();
-        focusDock(Math.min(focusedIndex, dock.getChildCount() - 1));
+        focusDock(Math.min(focusedIndex, n - 1));
     }
 
     /** Six cards fill the width; a dock with more than that scrolls. */
@@ -393,9 +400,14 @@ public class MainActivity extends Activity {
             });
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
             lp.leftMargin = grid.getChildCount() % COLUMNS == 0 ? 0 : gap;
+            // Each row's ends stop the remote too, rather than jumping to the row above or below.
+            if (grid.getChildCount() % COLUMNS == 0) Ui.endOfRow(tile, View.FOCUS_LEFT);
+            if (grid.getChildCount() % COLUMNS == COLUMNS - 1) Ui.endOfRow(tile, View.FOCUS_RIGHT);
             lp.bottomMargin = Ui.dp(this, 10);
             grid.addView(tile, lp);
         }
+        int n = grid.getChildCount();
+        if (n > 0) Ui.endOfRow(grid.getChildAt(n - 1), View.FOCUS_RIGHT); // a short last row
     }
 
     private void addToDock(Apps.App app) {
