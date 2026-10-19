@@ -8,6 +8,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -33,7 +35,10 @@ import android.widget.ScrollView;
 import android.widget.TextClock;
 import android.widget.TextView;
 
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,6 +56,10 @@ public class MainActivity extends Activity {
     private static final int DIM = 0x0A0C10; // the colour the photo darkens towards in the grid
     private static final int COLUMNS = 6; // dock cards and grid columns line up
     private static final String KEY_WALL = "wall";
+    private static final String AUTHOR = "Sam Fonseca";
+    private static final String AUTHOR_X = "@oneofthesamuels";
+    private static final String REPO = "github.com/samuel-fonseca/google-tv-home";
+    private static final String UNINSTALL = "Uninstall";
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService decoder = Executors.newSingleThreadExecutor();
@@ -133,6 +142,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onStart() {
         super.onStart();
+        SettingsKey.ensureEnabled(this);
         main.postDelayed(rotate, ROTATE_MS);
         nowPlaying.start();
     }
@@ -180,6 +190,18 @@ public class MainActivity extends Activity {
         focusedIndex = 0;
         dockScroll.smoothScrollTo(0, 0);
         focusDock(0); // and the page scrolls back up with it
+    }
+
+    // The remote's Options key opens the focused tile's menu, like a long press; Info, a note about
+    // this launcher. On key up, like a click, so the press doesn't also reach the dialog.
+    @Override public boolean onKeyUp(int keyCode, KeyEvent event) {
+        View f = getCurrentFocus();
+        if (keyCode == KeyEvent.KEYCODE_MENU && Apps.tilePkg(f) != null) return f.performLongClick();
+        if (keyCode == KeyEvent.KEYCODE_INFO) {
+            showAbout();
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
     }
 
     @Override public void onBackPressed() {
@@ -440,15 +462,38 @@ public class MainActivity extends Activity {
     }
 
     private void addToDock(Apps.App app) {
+        List<String> choices = new ArrayList<>(Arrays.asList("Add to dock"));
+        if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
         dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(app.label)
-                .setItems(new String[] {"Add to dock"}, (d, which) -> {
+                .setItems(choices.toArray(new String[0]), (d, which) -> {
+                    if (which == 1) {
+                        Apps.uninstall(this, app.pkg);
+                        return;
+                    }
                     List<String> pkgs = Apps.dock(this);
                     pkgs.add(app.pkg);
                     Apps.saveDock(this, pkgs);
                     focusedPkg = app.pkg; // land on it in the dock
                     buildDock();
                 })
+                .show();
+    }
+
+    /** What this launcher is, which version, and where it comes from. */
+    private void showAbout() {
+        String version = "";
+        try {
+            PackageInfo p = getPackageManager().getPackageInfo(getPackageName(), 0);
+            version = "Version " + p.versionName + ", installed "
+                    + DateFormat.getDateInstance(DateFormat.LONG).format(new Date(p.lastUpdateTime)) + "\n";
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+        dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Google TV Home")
+                .setMessage("A minimal, ad-free home screen for Google TV.\n\n" + version
+                        + "Author: "+ AUTHOR +" <"+ AUTHOR_X +"> \n\n" + REPO + "\nMIT License")
+                .setPositiveButton("OK", null)
                 .show();
     }
 
@@ -464,10 +509,15 @@ public class MainActivity extends Activity {
     private void editDock(Apps.App app) {
         List<String> pkgs = Apps.dock(this);
         int pos = pkgs.indexOf(app.pkg);
-        String[] choices = {"Move left", "Move right", "Remove from dock"};
+        List<String> choices = new ArrayList<>(Arrays.asList("Move left", "Move right", "Remove from dock"));
+        if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
         dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(app.label)
-                .setItems(choices, (d, which) -> {
+                .setItems(choices.toArray(new String[0]), (d, which) -> {
+                    if (which == 3) {
+                        Apps.uninstall(this, app.pkg);
+                        return;
+                    }
                     // Focus follows a moved app by package (see buildDock).
                     if (which == 0 && pos > 0) {
                         pkgs.add(pos - 1, pkgs.remove(pos));

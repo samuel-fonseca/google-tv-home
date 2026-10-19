@@ -21,7 +21,7 @@ com.mediatek.MtkDemo
 fusion.android.tv.demo
 
 # Optional: comment these out if you use them
-com.google.android.katniss         # Google Assistant / voice search (~50 MB RAM); mic button stops working
+com.google.android.katniss         # Google Assistant / voice search (~50 MB RAM); mic and Search buttons stop working
 com.google.android.youtube.tvmusic # YouTube Music
 
 # Stock home screen: disabled only AFTER the new launcher is installed and set as Home

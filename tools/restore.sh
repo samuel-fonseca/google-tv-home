@@ -35,6 +35,8 @@ if [ -f "$APPLIED" ]; then
 fi
 
 # Stop the launcher catching the remote's Settings key, so it reaches the Google TV panel again.
+# First take back its permission to switch that on again. Fails harmlessly if it isn't installed.
+run pm revoke io.github.samuelfonseca.tvhome android.permission.WRITE_SECURE_SETTINGS || true
 orig_services=$(sed -n 's/^enabled_accessibility_services=//p' "$BACKUP_DIR/settings-secure.txt")
 if [ -n "$orig_services" ] && [ "$orig_services" != null ]; then
   run settings put secure enabled_accessibility_services "$orig_services"

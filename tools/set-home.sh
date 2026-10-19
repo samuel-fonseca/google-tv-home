@@ -16,6 +16,9 @@ adb shell cmd notification allow_listener io.github.samuelfonseca.tvhome/io.gith
 # the key and opens Settings instead. This replaces any other enabled accessibility services.
 adb shell settings put secure enabled_accessibility_services io.github.samuelfonseca.tvhome/io.github.samuelfonseca.tvhome.SettingsKey
 adb shell settings put secure accessibility_enabled 1
+# Every reinstall force-stops the launcher, and Android turns a force-stopped app's accessibility
+# services off. This lets the launcher turn its own back on when it next starts.
+adb shell pm grant io.github.samuelfonseca.tvhome android.permission.WRITE_SECURE_SETTINGS
 # ORDER MATTERS. setupwraith must be off before launcherx: if the Google TV home disappears while
 # setupwraith is enabled, its RecoveryActivity becomes Home and wipes the saved Wi-Fi network
 # (it has happened).

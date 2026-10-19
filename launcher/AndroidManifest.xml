@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.samuelfonseca.tvhome"
-    android:versionCode="8"
-    android:versionName="1.7">
+    android:versionCode="9"
+    android:versionName="1.8">
 
     <!-- build.sh passes the same values to aapt2; declared here too so Android Lint sees them. -->
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
@@ -13,6 +13,12 @@
 
     <!-- Album art for the now-playing card, when the playing app only gives a URL. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Switches SettingsKey back on after a reinstall turns it off. Not grantable to an app by
+         the system (ProtectedPermissions); tools/set-home.sh grants it over adb. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Uninstall in the app menus: Android's own confirmation prompt. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Android 11+ package visibility: everything a launcher can open. -->
     <queries>

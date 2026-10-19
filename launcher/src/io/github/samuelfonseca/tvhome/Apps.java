@@ -4,12 +4,16 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
+import android.net.Uri;
+import android.provider.Settings;
+import android.view.View;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -136,6 +140,34 @@ final class Apps {
         if (intent == null) return false;
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         ctx.startActivity(intent, options);
+        return true;
+    }
+
+    /** The package a focused app tile is for (tiles are tagged with it), or null for any other view. */
+    static String tilePkg(View focused) {
+        return focused != null && focused.getTag() instanceof String ? (String) focused.getTag() : null;
+    }
+
+    /** Whether it can be uninstalled: apps that came with the TV can only be disabled. */
+    static boolean canUninstall(Context ctx, String pkg) {
+        if (pkg.startsWith(INPUT)) return false;
+        try {
+            return (ctx.getPackageManager().getApplicationInfo(pkg, 0).flags & ApplicationInfo.FLAG_SYSTEM) == 0;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    /** Android's uninstall prompt. The home screen hears when the app goes (packagesChanged). */
+    static void uninstall(Context ctx, String pkg) {
+        ctx.startActivity(new Intent(Intent.ACTION_DELETE, Uri.fromParts("package", pkg, null)));
+    }
+
+    /** The app's page in Settings: storage, permissions, force stop. False for a TV input. */
+    static boolean showInfo(Context ctx, String pkg) {
+        if (pkg.startsWith(INPUT)) return false;
+        ctx.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", pkg, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         return true;
     }
 

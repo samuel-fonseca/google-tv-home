@@ -32,6 +32,9 @@ TV back the way it was.
 - **Quick access** to the input switcher, All apps and Settings, top right.
 - **Settings button works again:** with the stock launcher disabled, the remote's Settings key
   does nothing; the launcher catches it and opens Settings from any app.
+- **Options and Info buttons:** Options opens a tile's menu, the same as a long-press, where apps
+  you installed can also be uninstalled. Info shows the launcher's version and where it's from;
+  in All apps, it opens the app's page in Settings.
 - **Fully reversible** debloat, with a backup taken before anything changes.
 
 ## Requirements

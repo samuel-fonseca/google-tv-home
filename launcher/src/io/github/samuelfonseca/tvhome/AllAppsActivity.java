@@ -3,19 +3,36 @@ package io.github.samuelfonseca.tvhome;
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-/** Every launchable app in a grid, over the dimmed home screen. Long-press to add to the dock. */
+/**
+ * Every launchable app in a grid, over the dimmed home screen. Long-press or Options to add to the
+ * dock or uninstall.
+ */
 public class AllAppsActivity extends Activity {
     private static final int COLUMNS = 5;
+
+    // An app uninstalled from here: lay the grid out again without it.
+    private final BroadcastReceiver removed = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            recreate();
+        }
+    };
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -45,6 +62,7 @@ public class AllAppsActivity extends Activity {
         for (int i = 0; i < apps.size(); i++) {
             Apps.App app = apps.get(i);
             View tile = Ui.appCard(this, app, width, true);
+            tile.setTag(app.pkg);
             tile.setOnClickListener(v -> {
                 Bundle opts = ActivityOptions.makeScaleUpAnimation(
                         v, 0, 0, v.getWidth(), v.getHeight()).toBundle();
@@ -68,14 +86,39 @@ public class AllAppsActivity extends Activity {
         scroll.addView(page);
         setContentView(scroll);
         if (grid.getChildCount() > 0) grid.getChildAt(0).requestFocus();
+
+        IntentFilter f = new IntentFilter(Intent.ACTION_PACKAGE_REMOVED);
+        f.addDataScheme("package");
+        registerReceiver(removed, f);
+    }
+
+    @Override protected void onDestroy() {
+        unregisterReceiver(removed);
+        super.onDestroy();
+    }
+
+    // The remote's Options key opens the focused tile's menu, like a long press; Info, the app's
+    // page in Settings. On key up, like a click, so the press doesn't also reach what opens.
+    @Override public boolean onKeyUp(int keyCode, KeyEvent event) {
+        View f = getCurrentFocus();
+        String pkg = Apps.tilePkg(f);
+        if (pkg != null && keyCode == KeyEvent.KEYCODE_MENU) return f.performLongClick();
+        if (pkg != null && keyCode == KeyEvent.KEYCODE_INFO && Apps.showInfo(this, pkg)) return true;
+        return super.onKeyUp(keyCode, event);
     }
 
     private void toggleDock(Apps.App app) {
         List<String> dock = Apps.dock(this);
         boolean inDock = dock.contains(app.pkg);
+        List<String> choices = new ArrayList<>(Arrays.asList(inDock ? "Remove from dock" : "Add to dock"));
+        if (Apps.canUninstall(this, app.pkg)) choices.add("Uninstall");
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(app.label)
-                .setItems(new String[] {inDock ? "Remove from dock" : "Add to dock"}, (d, w) -> {
+                .setItems(choices.toArray(new String[0]), (d, w) -> {
+                    if (w == 1) {
+                        Apps.uninstall(this, app.pkg);
+                        return;
+                    }
                     if (inDock) dock.remove(app.pkg); else dock.add(app.pkg);
                     Apps.saveDock(this, dock);
                 })
