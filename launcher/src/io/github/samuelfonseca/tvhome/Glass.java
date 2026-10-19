@@ -42,8 +42,8 @@ final class Glass extends Drawable {
         this.radius = radius;
         this.edge = edge;
         // Darker than the bare blur, which skips the home screen's scrims, then a faint lift.
-        shade.setColor(0x66000000);
-        tint.setColor(0x0FFFFFFF);
+        shade.setColor(0x59000000);
+        tint.setColor(0x21FFFFFF);
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(edge);
     }
@@ -53,10 +53,10 @@ final class Glass extends Drawable {
         clip.reset();
         clip.addRoundRect(box, radius, radius, Path.Direction.CW);
         gloss.setShader(new LinearGradient(0, b.top, 0, b.top + b.height() * 0.5f,
-                0x1FFFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
+                0x2EFFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
         // Brightest top-left, faint through the middle, a little light again bottom-right.
         rim.setShader(new LinearGradient(b.left, b.top, b.right, b.bottom,
-                new int[] {0x99FFFFFF, 0x1AFFFFFF, 0x40FFFFFF}, new float[] {0, 0.55f, 1},
+                new int[] {0xBFFFFFFF, 0x33FFFFFF, 0x59FFFFFF}, new float[] {0, 0.55f, 1},
                 Shader.TileMode.CLAMP));
     }
 
