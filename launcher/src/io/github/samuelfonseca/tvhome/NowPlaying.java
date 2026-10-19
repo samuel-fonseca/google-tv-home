@@ -141,7 +141,10 @@ final class NowPlaying extends LinearLayout {
             if (isPlaying(controller.getPlaybackState())) controller.getTransportControls().pause();
             else controller.getTransportControls().play();
         });
-        addButton(Ui.nextIcon(), "Next", () -> controller.getTransportControls().skipToNext());
+        View next = addButton(Ui.nextIcon(), "Next", () -> controller.getTransportControls().skipToNext());
+        // Ends of the row stop the remote instead of falling through to the dock below.
+        Ui.endOfRow(art, View.FOCUS_LEFT);
+        Ui.endOfRow(next, View.FOCUS_RIGHT);
     }
 
     /** Start following media sessions. Call from onStart. */
@@ -313,7 +316,7 @@ final class NowPlaying extends LinearLayout {
         }
     }
 
-    private void addButton(android.graphics.drawable.Drawable icon, String description, Runnable action) {
+    private View addButton(android.graphics.drawable.Drawable icon, String description, Runnable action) {
         View b = Ui.roundButton(getContext(), icon, description);
         b.setOnClickListener(v -> {
             if (controller != null) action.run();
@@ -321,6 +324,7 @@ final class NowPlaying extends LinearLayout {
         LayoutParams lp = new LayoutParams(Ui.dp(getContext(), 40), Ui.dp(getContext(), 40));
         if (getChildCount() > 2) lp.leftMargin = Ui.dp(getContext(), 12);
         addView(b, lp);
+        return b;
     }
 
     private static boolean isPlaying(PlaybackState s) {

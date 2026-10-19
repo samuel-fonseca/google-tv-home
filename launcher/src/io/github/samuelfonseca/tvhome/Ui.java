@@ -25,6 +25,8 @@ import android.widget.TextView;
 final class Ui {
     static final Typeface LIGHT = Typeface.create("sans-serif-light", Typeface.NORMAL);
     static final Typeface MEDIUM = Typeface.create("sans-serif-medium", Typeface.NORMAL);
+    /** How much a focused card grows. The home screen's highlight is drawn to match. */
+    static final float FOCUS_SCALE = 1.08f;
     private static final DecelerateInterpolator EASE = new DecelerateInterpolator(2f);
 
     private Ui() {}
@@ -84,7 +86,7 @@ final class Ui {
         tile.addView(label, lp);
 
         tile.setOnFocusChangeListener((v, focused) -> {
-            float s = focused ? 1.12f : 1f;
+            float s = focused ? FOCUS_SCALE : 1f;
             card.setPivotX(width / 2f);
             card.setPivotY(height / 2f);
             card.animate().scaleX(s).scaleY(s).translationZ(focused ? dp(ctx, 14) : 0)
@@ -105,6 +107,21 @@ final class Ui {
         g.setColor(0x66000000);
         g.setStroke(Math.max(1, dp(ctx, 0.75f)), 0x1AFFFFFF);
         return g;
+    }
+
+    /** Text over a photo: size, face, colour, and a soft shadow so it reads on bright skies. */
+    static void style(TextView t, float sp, Typeface face, int color) {
+        t.setTextSize(sp);
+        t.setTypeface(face);
+        t.setTextColor(color);
+        t.setShadowLayer(6f, 0, 2f, 0x99000000);
+    }
+
+    /** Make {@code v} a dead end for the remote in one direction (FOCUS_LEFT or FOCUS_RIGHT). */
+    static void endOfRow(View v, int direction) {
+        if (v.getId() == View.NO_ID) v.setId(View.generateViewId());
+        if (direction == View.FOCUS_LEFT) v.setNextFocusLeftId(v.getId());
+        else v.setNextFocusRightId(v.getId());
     }
 
     /** A small round button for the top bar; white with dark icon when focused. */

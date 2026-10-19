@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.samuelfonseca.tvhome"
-    android:versionCode="6"
-    android:versionName="1.5">
+    android:versionCode="7"
+    android:versionName="1.6">
 
     <!-- build.sh passes the same values to aapt2; declared here too so Android Lint sees them. -->
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
@@ -74,6 +74,18 @@
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Screensaver: the wallpapers with a drifting clock. Turned on over adb; see the README. -->
+        <service
+            android:name=".WallpaperDream"
+            android:exported="true"
+            android:label="Home wallpapers"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
 
