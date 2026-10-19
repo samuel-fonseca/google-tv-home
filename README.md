@@ -7,12 +7,12 @@ devices, but the debloat lists are TCL-specific.
 Nothing is uninstalled: packages are disabled for user 0 (`pm disable-user --user 0`), and
 `tools/restore.sh` puts everything back.
 
-![Home screen with the now-playing card above the dock](docs/screenshots/now-playing.jpg)
+![Home screen: the now-playing card and the dock on glass panels](docs/screenshots/now-playing.jpg)
 
-| | |
-|---|---|
-| ![App grid below the dock](docs/screenshots/app-grid.jpg) | ![All apps, with an HDMI input at the end](docs/screenshots/all-apps.jpg) |
-| Down from the dock: every other app, in a grid | All apps, then TV inputs; long-press to add one to the dock |
+| | | |
+|---|---|---|
+| ![App grid below the dock](docs/screenshots/app-grid.jpg) | ![Screensaver: a photo with the time and credit](docs/screenshots/screensaver.jpg) | ![All apps, with an HDMI input at the end](docs/screenshots/all-apps.jpg) |
+| Down from the dock: every other app, in a grid | Screensaver: the photos, with a clock that moves each minute | All apps, then TV inputs; long-press to add one to the dock |
 
 ## The launcher
 `launcher/` (package `io.github.samuelfonseca.tvhome`): rotating nature wallpapers, a clock,

@@ -2,6 +2,7 @@ package io.github.samuelfonseca.tvhome;
 
 import android.animation.ValueAnimator;
 import android.graphics.Bitmap;
+import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
@@ -41,11 +42,13 @@ final class Glass extends Drawable {
         this.backdrop = backdrop;
         this.radius = radius;
         this.edge = edge;
-        // Dark, smoky glass: the blur mostly shaded, a trace of lift; the edge keeps it visible.
+        // Dark, smoky glass: the blur mostly shaded, with a trace of lift.
         shade.setColor(0x8C000000);
         tint.setColor(0x08FFFFFF);
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(edge);
+        // Softened, so the edge blends into the glass rather than outlining it.
+        rim.setMaskFilter(new BlurMaskFilter(edge * 1.5f, BlurMaskFilter.Blur.NORMAL));
     }
 
     @Override protected void onBoundsChange(Rect b) {
@@ -56,7 +59,7 @@ final class Glass extends Drawable {
                 0x24FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
         // Brightest top-left, faint through the middle, a little light again bottom-right.
         rim.setShader(new LinearGradient(b.left, b.top, b.right, b.bottom,
-                new int[] {0xCCFFFFFF, 0x40FFFFFF, 0x66FFFFFF}, new float[] {0, 0.55f, 1},
+                new int[] {0x8CFFFFFF, 0x1AFFFFFF, 0x33FFFFFF}, new float[] {0, 0.5f, 1},
                 Shader.TileMode.CLAMP));
     }
 
