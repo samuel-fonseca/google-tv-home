@@ -44,7 +44,7 @@ public class AllAppsActivity extends Activity {
         List<Apps.App> apps = Apps.all(this);
         for (int i = 0; i < apps.size(); i++) {
             Apps.App app = apps.get(i);
-            View tile = Ui.appCard(this, app, width);
+            View tile = Ui.appCard(this, app, width, true);
             tile.setOnClickListener(v -> {
                 Bundle opts = ActivityOptions.makeScaleUpAnimation(
                         v, 0, 0, v.getWidth(), v.getHeight()).toBundle();

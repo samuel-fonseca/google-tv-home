@@ -16,15 +16,20 @@ Nothing is uninstalled: packages are disabled for user 0 (`pm disable-user --use
 
 ## The launcher
 `launcher/` (package `io.github.samuelfonseca.tvhome`): rotating nature wallpapers, a clock,
-and a dock of app tiles on a frosted band. Top-right buttons open the input switcher (Google
+and a dock of app tiles on a glass band. Top-right buttons open the input switcher (Google
 TV's own, `com.android.tv.action.VIEW_INPUTS`), All apps, and Settings.
 
 - **Dock:** long-press a tile to move it or remove it. Long-press in All apps to add one.
 - **App grid:** press down from the dock and the page scrolls up, like tvOS: the dock moves to
   the top, the wallpaper dims, and every app not in the dock follows in a grid. Back returns to
   the dock. Long-press a grid tile to add it to the dock.
-- **Focus:** one glass frame (`Highlight`) springs from tile to tile across the dock and the
-  grid, and fades out when focus moves to the buttons. Down into a shorter last row lands on its
+- **Glass:** the dock band and the now-playing card are frosted glass, like tvOS: a blurred copy
+  of the wallpaper lined up with the real one, under a tint, with a fine edge that catches the
+  light (`Glass`; the blur is `Blur`, on a 1/16-size thumbnail). Android only blurs what's behind
+  a view from 12 on, so each panel draws its own.
+- **Focus:** the light on the focused card (`Highlight`: a soft halo, a hairline edge fading down
+  the card, a diagonal sheen) springs from tile to tile across the dock and the grid, and fades
+  out when focus moves to the buttons. Dock cards have no names; grid cards show theirs on focus. Down into a shorter last row lands on its
   last tile; the bottom row, and the ends of the button and now-playing rows, stop the remote
   instead of jumping to whatever is nearest. The dock remembers the last app by package, so
   reordering or rebuilding it keeps your place.
@@ -130,7 +135,7 @@ Run locally from the repo root; CI (`.github/workflows/ci.yml`) runs the same on
 
 ```
 launcher/build.sh   # build first: lint reads build/classes
-launcher/test.sh    # JUnit on a plain JVM: Lists, Scroll, Spring, Grid, and the repo's data files
+launcher/test.sh    # JUnit on a plain JVM: Lists, Scroll, Spring, Grid, Blur, and the repo's data files
 launcher/lint.sh    # Android Lint; fails on any warning
 shellcheck tools/*.sh launcher/*.sh
 ```
@@ -138,7 +143,7 @@ shellcheck tools/*.sh launcher/*.sh
 `test.sh` and `lint.sh` download JUnit and a pinned lint release (cmdline-tools 11076708, lint
 8.2.0) into `~/.cache/tvhome`, checking their SHA-256. Newer standalone lint releases crash on
 `{@code}` in doc comments. Only classes with no Android dependency can be unit-tested, so pure
-logic lives in `Lists`, `Scroll`, `Spring` and `Grid`. `RepoFilesTest` also checks that the debloat lists never
+logic lives in `Lists`, `Scroll`, `Spring`, `Grid` and `Blur`. `RepoFilesTest` also checks that the debloat lists never
 disable `launcherx` or `setupwraith` themselves (see [Undo](#undo) for why). CodeQL
 (`.github/workflows/codeql.yml`) scans the Java and the workflows once the repo is public;
 GitHub code scanning isn't available for free on private repos.

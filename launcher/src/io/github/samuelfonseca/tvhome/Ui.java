@@ -36,10 +36,10 @@ final class Ui {
     }
 
     /**
-     * A focusable app card: 16:9 rounded banner with the app name underneath, shown only on
-     * focus. The card scales up and casts a shadow when focused, like tvOS.
+     * A focusable app card: 16:9 rounded banner, and if {@code labelled} the app name underneath,
+     * shown only on focus. The card scales up and casts a shadow when focused, like tvOS.
      */
-    static LinearLayout appCard(Context ctx, Apps.App app, int width) {
+    static LinearLayout appCard(Context ctx, Apps.App app, int width, boolean labelled) {
         int height = width * 9 / 16;
         LinearLayout tile = new LinearLayout(ctx);
         tile.setOrientation(LinearLayout.VERTICAL);
@@ -83,7 +83,7 @@ final class Ui {
         // Same width as the card, so the label never pushes neighbouring tiles apart.
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(width, -2);
         lp.topMargin = dp(ctx, 12);
-        tile.addView(label, lp);
+        if (labelled) tile.addView(label, lp);
 
         tile.setOnFocusChangeListener((v, focused) -> {
             float s = focused ? FOCUS_SCALE : 1f;
@@ -95,18 +95,6 @@ final class Ui {
                     .setDuration(160).start();
         });
         return tile;
-    }
-
-    /**
-     * The faint frosted panel behind the dock and the now-playing card. Contents inset by 16dp
-     * with 8dp corners sit concentric with its 24dp corners.
-     */
-    static GradientDrawable glass(Context ctx) {
-        GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dp(ctx, 24));
-        g.setColor(0x66000000);
-        g.setStroke(Math.max(1, dp(ctx, 0.75f)), 0x1AFFFFFF);
-        return g;
     }
 
     /** Text over a photo: size, face, colour, and a soft shadow so it reads on bright skies. */

@@ -74,8 +74,11 @@ final class NowPlaying extends LinearLayout {
         }
     };
 
-    /** {@code onHide} runs when the card disappears while one of its buttons has focus. */
-    NowPlaying(Context ctx, Runnable onHide) {
+    /**
+     * {@code onHide} runs when the card disappears while one of its buttons has focus;
+     * {@code background} is the card's panel.
+     */
+    NowPlaying(Context ctx, Runnable onHide, android.graphics.drawable.Drawable background) {
         super(ctx);
         this.onHide = onHide;
         sessions = (MediaSessionManager) ctx.getSystemService(Context.MEDIA_SESSION_SERVICE);
@@ -89,7 +92,7 @@ final class NowPlaying extends LinearLayout {
         setVisibility(GONE);
         int pad = Ui.dp(ctx, 16);
         setPadding(pad, pad, pad, pad);
-        setBackground(Ui.glass(ctx));
+        setBackground(background);
 
         art = new ImageView(ctx);
         art.setScaleType(ImageView.ScaleType.CENTER_CROP);

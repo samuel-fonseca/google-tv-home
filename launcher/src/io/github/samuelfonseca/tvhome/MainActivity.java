@@ -13,6 +13,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -57,8 +58,9 @@ public class MainActivity extends Activity {
     private TextView place, credit;
     private ScrollView page;
     private LinearLayout content;
-    private FrameLayout band; // the dock's frosted background
-    private GradientDrawable bandBg;
+    private FrameLayout band; // the dock's glass panel
+    private Drawable bandBg;
+    private final Glass.Backdrop backdrop = new Glass.Backdrop(); // what the glass panels show
     private LinearLayout dock;
     private List<String> shownDock; // what buildDock last drew
     private List<String> gridDock; // the dock the grid was built without
@@ -200,6 +202,7 @@ public class MainActivity extends Activity {
             dim.setAlpha(p * 0.85f);
             bandBg.setAlpha(Math.round(255 * (1 - p))); // in the grid the dock is just the top row
             nowPlaying.setAlpha(1 - p); // it sits just above the dock, so it would peek in at the top
+            backdrop.redraw(); // the panels moved over the wallpaper
         });
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -209,7 +212,7 @@ public class MainActivity extends Activity {
 
         // One glass frame over the tiles that springs to whichever has focus (see followFocus).
         // In the page's overlay, so it scrolls with the page and draws over the cards.
-        highlight = new Highlight(Ui.dp(this, 10) * Ui.FOCUS_SCALE, Ui.dp(this, 2));
+        highlight = new Highlight(Ui.dp(this, 10) * Ui.FOCUS_SCALE, Ui.dp(this, 1), Ui.dp(this, 6));
         content.getOverlay().add(highlight);
         content.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             highlight.setBounds(0, 0, r - l, b - t);
@@ -283,22 +286,25 @@ public class MainActivity extends Activity {
 
         // Card and dock share a left edge, and the album art lines up with the first dock card.
         int inset = Ui.dp(this, 32);
-        nowPlaying = new NowPlaying(this, () -> focusDock(focusedIndex));
+        nowPlaying = new NowPlaying(this, () -> focusDock(focusedIndex), glass());
+        backdrop.addPanel(nowPlaying);
         LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(-2, -2);
         nlp.setMargins(inset, 0, 0, Ui.dp(this, 16));
         bottom.addView(nowPlaying, nlp);
 
-        // The dock sits on a faint frosted band, like the top row on tvOS.
+        // The dock sits on a glass band, like the top row on tvOS.
         band = new FrameLayout(this);
         band.setClipChildren(false);
-        bandBg = Ui.glass(this);
+        bandBg = glass();
         band.setBackground(bandBg);
+        backdrop.addPanel(band);
         dockScroll = new HorizontalScrollView(this);
         dockScroll.setHorizontalScrollBarEnabled(false);
         dockScroll.setClipChildren(false);
         dockScroll.setClipToPadding(false);
         dockScroll.setFillViewport(true);
-        dockScroll.setPadding(margin - inset, Ui.dp(this, 20), margin - inset, Ui.dp(this, 12));
+        // No names under dock cards, so even padding centres them in the band.
+        dockScroll.setPadding(margin - inset, Ui.dp(this, 18), margin - inset, Ui.dp(this, 18));
         // A long dock scrolls sideways under the highlight; carry it along rather than chase.
         dockScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> {
             View f = getCurrentFocus();
@@ -333,7 +339,7 @@ public class MainActivity extends Activity {
         for (String pkg : shownDock) {
             Apps.App app = Apps.get(this, pkg);
             if (app == null) continue; // not installed or disabled
-            View tile = Ui.appCard(this, app, width);
+            View tile = Ui.appCard(this, app, width, false);
             tile.setTag(app.pkg);
             if (app.pkg.equals(focusedPkg)) focusedIndex = dock.getChildCount();
             tile.setOnClickListener(v -> {
@@ -367,7 +373,7 @@ public class MainActivity extends Activity {
         int width = cardWidth();
         for (Apps.App app : Apps.all(this)) {
             if (gridDock.contains(app.pkg)) continue;
-            View tile = Ui.appCard(this, app, width);
+            View tile = Ui.appCard(this, app, width, true);
             tile.setOnClickListener(v -> {
                 Bundle opts = ActivityOptions.makeScaleUpAnimation(
                         v, 0, 0, v.getWidth(), v.getHeight()).toBundle();
@@ -513,8 +519,10 @@ public class MainActivity extends Activity {
         final String[] w = walls.get(i);
         decoder.execute(() -> {
             Bitmap bmp = Wallpapers.decode(this, w[0]);
+            Bitmap blurred = bmp == null ? null : Glass.Backdrop.blur(bmp);
             main.post(() -> {
                 if (isDestroyed() || bmp == null) return;
+                backdrop.set(blurred, fade ? FADE_MS : 0);
                 wall = i;
                 Apps.prefs(this).edit().putInt(KEY_WALL, i).apply();
                 place.setText(w[1]);
@@ -532,6 +540,11 @@ public class MainActivity extends Activity {
                 }).start();
             });
         });
+    }
+
+    /** The glass behind the dock and the now-playing card: 24dp corners, a 1dp edge. */
+    private Glass glass() {
+        return new Glass(backdrop, Ui.dp(this, 24), Math.max(1, Ui.dp(this, 1)));
     }
 
     private View scrim(GradientDrawable.Orientation o, int color) {

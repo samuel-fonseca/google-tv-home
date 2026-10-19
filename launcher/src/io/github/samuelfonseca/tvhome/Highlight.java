@@ -1,5 +1,6 @@
 package io.github.samuelfonseca.tvhome;
 
+import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
@@ -12,9 +13,10 @@ import android.graphics.drawable.Drawable;
 import android.view.Choreographer;
 
 /**
- * One glass frame that springs from tile to tile: a bright rim and a sheen across the top of the
- * focused card. Added to the page's overlay, so it scrolls with the page and draws over the tiles.
- * Its bounds must cover the page (see MainActivity); it draws wherever the springs put it.
+ * The light on the focused card, springing from tile to tile: a small soft halo, a hairline edge
+ * that fades out down the card, and a diagonal sheen. Added to the page's overlay, so it scrolls
+ * with the page and draws over the tiles. Its bounds must cover the page (see MainActivity); it
+ * draws wherever the springs put it.
  */
 final class Highlight extends Drawable implements Choreographer.FrameCallback {
     private static final float STIFFNESS = 420f, DAMPING = 0.78f;
@@ -23,8 +25,8 @@ final class Highlight extends Drawable implements Choreographer.FrameCallback {
     // Centre and size rather than edges, so a move between same-sized tiles keeps its shape.
     private final Spring cx = new Spring(STIFFNESS, DAMPING), cy = new Spring(STIFFNESS, DAMPING);
     private final Spring w = new Spring(STIFFNESS, DAMPING), h = new Spring(STIFFNESS, DAMPING);
-    private final float radius, rimWidth;
-    private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final float radius, hairline;
+    private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint sheen = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
@@ -35,14 +37,18 @@ final class Highlight extends Drawable implements Choreographer.FrameCallback {
     private long lastFrame;
     private boolean scheduled;
 
-    /** @param radius the card's corner radius, before the focus scale */
-    Highlight(float radius, float rimWidth) {
+    /**
+     * @param radius the focused card's corner radius
+     * @param hairline width of the edge
+     * @param halo how far the soft glow reaches past the card
+     */
+    Highlight(float radius, float hairline, float halo) {
         this.radius = radius;
-        this.rimWidth = rimWidth;
-        rim.setStyle(Paint.Style.STROKE);
-        rim.setStrokeWidth(rimWidth);
-        glow.setStyle(Paint.Style.STROKE);
-        glow.setStrokeWidth(rimWidth * 4);
+        this.hairline = hairline;
+        edge.setStyle(Paint.Style.STROKE);
+        edge.setStrokeWidth(hairline);
+        glow.setMaskFilter(new BlurMaskFilter(halo, BlurMaskFilter.Blur.OUTER));
+        glow.setColor(0xFFFFFFFF);
     }
 
     /** Spring to {@code target}, or jump there if the highlight was hidden. */
@@ -105,29 +111,30 @@ final class Highlight extends Drawable implements Choreographer.FrameCallback {
         if (alpha == 0) return;
         float hw = w.value / 2, hh = h.value / 2;
         rect.set(cx.value - hw, cy.value - hh, cx.value + hw, cy.value + hh);
-        int a = Math.round(alpha * 255);
 
-        // Soft outer glow, then the rim just outside the card's edge.
-        glow.setColor(0x26FFFFFF);
-        glow.setAlpha(Math.round(alpha * 0x26));
+        // Halo: a faint blur just outside the card, not a ring.
+        glow.setAlpha(Math.round(alpha * 0x40));
         c.drawRoundRect(rect, radius, radius, glow);
 
-        // Sheen: white fading out across the top half, clipped to the card.
+        // Sheen: light falling diagonally from the top-left corner, gone by the middle.
         clip.reset();
         clip.addRoundRect(rect, radius, radius, Path.Direction.CW);
-        sheen.setShader(new LinearGradient(0, rect.top, 0, rect.top + rect.height() * 0.6f,
-                0x38FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
-        sheen.setAlpha(a);
+        sheen.setShader(new LinearGradient(rect.left, rect.top,
+                rect.left + rect.width() * 0.5f, rect.top + rect.height() * 0.9f,
+                0x2EFFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
+        sheen.setAlpha(Math.round(alpha * 255));
         c.save();
         c.clipPath(clip);
         c.drawRect(rect, sheen);
         c.restore();
 
-        rim.setColor(0xE6FFFFFF);
-        rim.setAlpha(Math.round(alpha * 0xE6));
-        float o = rimWidth / 2;
-        rect.inset(-o, -o);
-        c.drawRoundRect(rect, radius + o, radius + o, rim);
+        // Hairline edge just inside the card: bright along the top, fading out downwards.
+        float o = hairline / 2;
+        edge.setShader(new LinearGradient(0, rect.top, 0, rect.bottom,
+                0xB3FFFFFF, 0x0DFFFFFF, Shader.TileMode.CLAMP));
+        edge.setAlpha(Math.round(alpha * 255));
+        rect.inset(o, o);
+        c.drawRoundRect(rect, radius - o, radius - o, edge);
     }
 
     @Override public void setAlpha(int a) {}
