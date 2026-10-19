@@ -25,6 +25,7 @@ final class Highlight extends Drawable implements Choreographer.FrameCallback {
     // Centre and size rather than edges, so a move between same-sized tiles keeps its shape.
     private final Spring cx = new Spring(STIFFNESS, DAMPING), cy = new Spring(STIFFNESS, DAMPING);
     private final Spring w = new Spring(STIFFNESS, DAMPING), h = new Spring(STIFFNESS, DAMPING);
+    private final Spring[] springs = {cx, cy, w, h};
     private final float radius, hairline;
     private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -94,7 +95,10 @@ final class Highlight extends Drawable implements Choreographer.FrameCallback {
         scheduled = false;
         float dt = lastFrame == 0 ? 1 / 60f : Math.min((now - lastFrame) / 1e9f, 0.1f);
         lastFrame = now;
-        boolean moving = cx.step(dt) | cy.step(dt) | w.step(dt) | h.step(dt);
+        boolean moving = false;
+        for (Spring s : springs) {
+            if (s.step(dt)) moving = true; // every spring steps, even once one has settled
+        }
         float fade = dt * 1e9f / FADE_NS;
         alpha = shown ? Math.min(1, alpha + fade) : Math.max(0, alpha - fade);
         boolean fading = shown ? alpha < 1 : alpha > 0;
