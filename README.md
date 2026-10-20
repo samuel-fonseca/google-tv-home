@@ -30,7 +30,7 @@ TV back the way it was.
 - **Rotating wallpapers** from Wikimedia Commons featured pictures, with credits on screen: lakes,
   mountains, forests, coasts and night skies. Pick which categories to show, how often the photo
   changes, or a plain dark color instead.
-- **Input tiles your way:** give an HDMI input an icon (game console, set-top box, disc player,
+- **Input tiles your way:** give an HDMI input an icon (input, HDMI port, game console, set-top box, disc player,
   computer, or none) and a color.
 - **Screensaver** (optional): the same photos crossfading, with the time and date.
 - **Quick access** to the input switcher, Preferences and Settings, top right; each spells out

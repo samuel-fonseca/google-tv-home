@@ -192,7 +192,7 @@ final class Ui {
     }
 
     /** What an input tile can show beside its name, in the order its menu lists them. The first is the default. */
-    static final String[] GLYPHS = {"HDMI port", "Game console", "Set-top box", "Disc player", "Computer", "Name only"};
+    static final String[] GLYPHS = {"Input", "HDMI port", "Game console", "Set-top box", "Disc player", "Computer", "Name only"};
 
     /**
      * A 16:9 banner for things without one (TV inputs): a glyph from {@link #GLYPHS} and the name, in
@@ -246,12 +246,14 @@ final class Ui {
      */
     private static float[] glyphBox(String glyph) {
         switch (glyph) {
-            case "Game console": return new float[] {0.3f, 1.6f};
+            case "Input": return new float[] {0.32f, 1.3f};
+            case "HDMI port": return new float[] {0.2f, 2.6f};
+            case "Game console": return new float[] {0.34f, 1.45f};
             case "Set-top box": return new float[] {0.24f, 2.2f};
             case "Disc player": return new float[] {0.34f, 1f};
             case "Computer": return new float[] {0.34f, 1.3f};
             case "Name only": return new float[] {0, 0};
-            default: return new float[] {0.2f, 2.6f}; // HDMI port
+            default: return new float[] {0.32f, 1.3f}; // Input
         }
     }
 
@@ -261,22 +263,17 @@ final class Ui {
         p.setStrokeJoin(Paint.Join.ROUND);
         switch (glyph) {
             case "Game console": {
-                // A pill with a grip hanging from each end; a d-pad on the left, two buttons on the right.
-                Path pad = new Path(), grips = new Path();
-                float in = stroke / 2; // keep the outline inside the box
-                pad.addRoundRect(x + in, y + in, x + w - in, y + h * 0.66f, h * 0.3f, h * 0.3f, Path.Direction.CW);
-                float r = h * 0.3f;
-                grips.addCircle(x + r + in, y + h - r - in, r, Path.Direction.CW);
-                grips.addCircle(x + w - r - in, y + h - r - in, r, Path.Direction.CW);
-                pad.op(grips, Path.Op.UNION);
+                // A modern controller: a wide body flaring into rounded grips, a d-pad on the left
+                // and two buttons on the right.
+                float in = stroke / 2;
                 p.setStyle(Paint.Style.STROKE);
-                c.drawPath(pad, p);
+                c.drawPath(controller(x + in, y + in, w - stroke, h - stroke), p);
                 p.setStyle(Paint.Style.FILL);
-                float dx = x + w * 0.27f, dy = y + h * 0.36f, arm = h * 0.15f, t = h * 0.055f;
+                float dx = x + w * 0.27f, dy = y + h * 0.36f, arm = h * 0.14f, t = h * 0.05f;
                 c.drawRect(dx - arm, dy - t, dx + arm, dy + t, p);
                 c.drawRect(dx - t, dy - arm, dx + t, dy + arm, p);
-                c.drawCircle(x + w * 0.67f, y + h * 0.42f, h * 0.065f, p);
-                c.drawCircle(x + w * 0.78f, y + h * 0.27f, h * 0.065f, p);
+                c.drawCircle(x + w * 0.68f, y + h * 0.42f, h * 0.07f, p);
+                c.drawCircle(x + w * 0.78f, y + h * 0.27f, h * 0.07f, p);
                 break;
             }
             case "Set-top box": {
@@ -312,11 +309,70 @@ final class Ui {
                 c.drawRoundRect(cx - w * 0.26f, y + h * 0.88f, cx + w * 0.26f, y + h, stroke / 2, stroke / 2, p);
                 break;
             }
+            case "HDMI port":
+                drawHdmi(c, p, x, y, w, h, stroke);
+                break;
             case "Name only":
                 break;
             default:
-                drawHdmi(c, p, x, y, w, h, stroke);
+                drawInput(c, p, x, y, w, h, stroke);
         }
+    }
+
+    /** A controller's outline filling the box at x, y: flat across the top, grips curling down at each end. */
+    private static Path controller(float x, float y, float w, float h) {
+        float[] v = {
+            // start, then three points per curve; straight lines repeat their end point
+            0.26f, 0.04f,
+            0.26f, 0.04f, 0.74f, 0.04f, 0.74f, 0.04f,
+            0.87f, 0.04f, 0.94f, 0.12f, 0.965f, 0.28f,
+            0.99f, 0.46f, 1f, 0.68f, 0.985f, 0.84f,
+            0.97f, 0.97f, 0.83f, 1f, 0.77f, 0.91f,
+            0.77f, 0.91f, 0.67f, 0.75f, 0.67f, 0.75f,
+            0.645f, 0.715f, 0.62f, 0.7f, 0.58f, 0.7f,
+            0.58f, 0.7f, 0.42f, 0.7f, 0.42f, 0.7f,
+            0.38f, 0.7f, 0.355f, 0.715f, 0.33f, 0.75f,
+            0.33f, 0.75f, 0.23f, 0.91f, 0.23f, 0.91f,
+            0.17f, 1f, 0.03f, 0.97f, 0.015f, 0.84f,
+            0f, 0.68f, 0.01f, 0.46f, 0.035f, 0.28f,
+            0.06f, 0.12f, 0.13f, 0.04f, 0.26f, 0.04f,
+        };
+        Path path = new Path();
+        path.moveTo(x + w * v[0], y + h * v[1]);
+        for (int i = 2; i < v.length; i += 6) {
+            path.cubicTo(x + w * v[i], y + h * v[i + 1], x + w * v[i + 2], y + h * v[i + 3],
+                    x + w * v[i + 4], y + h * v[i + 5]);
+        }
+        path.close();
+        return path;
+    }
+
+    /** An arrow into a box that's open on the left where it enters: Google's "input". */
+    private static void drawInput(Canvas c, Paint p, float x, float y, float w, float h, float stroke) {
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(stroke);
+        p.setStrokeCap(Paint.Cap.ROUND);
+        p.setStrokeJoin(Paint.Join.ROUND);
+        float in = stroke / 2, l = x + w * 0.3f, r = x + w - in, t = y + in, b = y + h - in, k = h * 0.16f;
+        Path box = new Path();
+        box.moveTo(l, y + h * 0.3f);
+        box.lineTo(l, t + k);
+        box.quadTo(l, t, l + k, t);
+        box.lineTo(r - k, t);
+        box.quadTo(r, t, r, t + k);
+        box.lineTo(r, b - k);
+        box.quadTo(r, b, r - k, b);
+        box.lineTo(l + k, b);
+        box.quadTo(l, b, l, b - k);
+        box.lineTo(l, y + h * 0.7f);
+        float cy = y + h / 2, tip = x + w * 0.68f, head = h * 0.2f;
+        box.moveTo(x + in, cy);
+        box.lineTo(tip, cy);
+        box.moveTo(tip - head, cy - head);
+        box.lineTo(tip, cy);
+        box.lineTo(tip - head, cy + head);
+        c.drawPath(box, p);
+        p.setStrokeCap(Paint.Cap.BUTT); // as the other glyphs expect
     }
 
     /** A 16:9 banner for apps whose own is unusable: a white icon centered on a diagonal gradient. */
@@ -364,12 +420,12 @@ final class Ui {
         c.drawRect(x + inset, y + inset, x + w - inset, y + inset + h * 0.2f, p);
     }
 
-    /** An HDMI port: "inputs". */
+    /** An arrow into a box: "inputs". */
     static Drawable inputIcon() {
         return new IconDrawable() {
             @Override void draw(Canvas c, float w, float h) {
-                float iw = w * 0.92f, ih = iw * 0.55f;
-                drawHdmi(c, paint, (w - iw) / 2, (h - ih) / 2, iw, ih, ih * 0.2f);
+                float iw = w * 0.94f, ih = iw * 0.76f;
+                drawInput(c, paint, (w - iw) / 2, (h - ih) / 2, iw, ih, w * 0.09f);
             }
         };
     }
