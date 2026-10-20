@@ -152,6 +152,9 @@ Android version and build, like `config/debloat.txt`. Lists must never include t
 launcher (`launcherx`) or `setupwraith`; `tools/set-home.sh` handles those, and the tests
 check for it.
 
+Using a coding agent? [AGENTS.md](AGENTS.md) has the checks, conventions and TV safety rules
+it should follow.
+
 Found a bug? Open an issue with your TV model, Android version and steps to reproduce.
 
 ## License
