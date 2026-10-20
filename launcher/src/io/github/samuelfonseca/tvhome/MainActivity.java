@@ -317,9 +317,10 @@ public class MainActivity extends Activity {
         right.setOrientation(LinearLayout.VERTICAL);
         right.setGravity(Gravity.END);
         LinearLayout buttons = new LinearLayout(this);
-        View inputs = Ui.labelButton(this, Ui.inputIcon(), "Inputs");
+        // On glass like the dock, each its own panel: they widen on focus.
+        View inputs = Ui.labelButton(this, Ui.inputIcon(), "Inputs", glass(20));
         inputs.setOnClickListener(v -> openInputs());
-        View settings = Ui.labelButton(this, Ui.gearIcon(), "Settings");
+        View settings = Ui.labelButton(this, Ui.gearIcon(), "Settings", glass(20));
         settings.setOnClickListener(v -> startActivity(
                 new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
         // The ends of the row stop the remote, instead of falling through to the nearest tile.
@@ -329,6 +330,8 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-2, Ui.dp(this, 40));
         gap.leftMargin = Ui.dp(this, 14);
         buttons.addView(settings, gap);
+        backdrop.addPanel(inputs);
+        backdrop.addPanel(settings);
         // Wrap content, so each row hugs the right edge and the column resizes with the caption,
         // or with a button as it widens.
         right.addView(buttons, new LinearLayout.LayoutParams(-2, -2));
@@ -716,7 +719,11 @@ public class MainActivity extends Activity {
 
     /** The glass behind the dock and the now-playing card: 24dp corners, a 1dp edge. */
     private Glass glass() {
-        return new Glass(backdrop, Ui.dp(this, 24), Math.max(1, Ui.dp(this, 1)));
+        return glass(24);
+    }
+
+    private Glass glass(float radiusDp) {
+        return new Glass(backdrop, Ui.dp(this, radiusDp), Math.max(1, Ui.dp(this, 1)));
     }
 
     private View scrim(GradientDrawable.Orientation o, int color) {
