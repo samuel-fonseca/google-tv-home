@@ -139,11 +139,14 @@ final class Ui {
         return b;
     }
 
+    /** What an input tile can show beside its name, in the order its menu lists them. The first is the default. */
+    static final String[] GLYPHS = {"HDMI port", "Game console", "Set-top box", "Disc player", "Computer", "Name only"};
+
     /**
-     * A 16:9 banner for things without one (TV inputs): an HDMI port and the name in white on a
-     * deep blue.
+     * A 16:9 banner for things without one (TV inputs): a glyph from {@link #GLYPHS} and the name, in
+     * white on one of the {@link Palette#TILES} gradients.
      */
-    static Drawable textBanner(String text) {
+    static Drawable textBanner(String text, String glyph, Palette.Swatch colour) {
         return new Drawable() {
             final Paint bg = new Paint();
             final Paint ink = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -158,11 +161,12 @@ final class Ui {
             @Override public void draw(Canvas c) {
                 android.graphics.Rect b = getBounds();
                 bg.setShader(new android.graphics.LinearGradient(b.left, b.top, b.right, b.bottom,
-                        0xFF00246B, 0xFF0070D1, android.graphics.Shader.TileMode.CLAMP));
+                        colour.from, colour.to, android.graphics.Shader.TileMode.CLAMP));
                 c.drawRect(b, bg);
 
-                // Port, gap, then name, centred as one group.
-                float ih = b.height() * 0.2f, iw = ih * 2.6f, gap = ih * 0.6f;
+                // Glyph, gap, then name, centred as one group.
+                float[] box = glyphBox(glyph);
+                float ih = b.height() * box[0], iw = ih * box[1], gap = iw > 0 ? b.height() * 0.12f : 0;
                 ink.setTextSize(b.height() * 0.3f);
                 float max = b.width() * 0.8f - iw - gap, w = ink.measureText(text);
                 if (w > max) {
@@ -170,7 +174,7 @@ final class Ui {
                     w = max;
                 }
                 float x = b.exactCenterX() - (iw + gap + w) / 2, cy = b.exactCenterY();
-                drawHdmi(c, port, x, cy - ih / 2, iw, ih, ih * 0.13f);
+                drawGlyph(c, port, glyph, x, cy - ih / 2, iw, ih, b.height() * 0.026f);
                 c.drawText(text, x + iw + gap, cy - (ink.ascent() + ink.descent()) / 2, ink);
             }
 
@@ -182,6 +186,85 @@ final class Ui {
             }
             @Override public int getOpacity() { return PixelFormat.OPAQUE; }
         };
+    }
+
+    /**
+     * A glyph's size on a banner: {height as a fraction of the banner's, width / height}. Each is
+     * sized to look about as heavy as the others beside the same name.
+     */
+    private static float[] glyphBox(String glyph) {
+        switch (glyph) {
+            case "Game console": return new float[] {0.3f, 1.6f};
+            case "Set-top box": return new float[] {0.24f, 2.2f};
+            case "Disc player": return new float[] {0.34f, 1f};
+            case "Computer": return new float[] {0.34f, 1.3f};
+            case "Name only": return new float[] {0, 0};
+            default: return new float[] {0.2f, 2.6f}; // HDMI port
+        }
+    }
+
+    /** One of the {@link #GLYPHS}, in outline like the HDMI port, in the box at x, y. */
+    private static void drawGlyph(Canvas c, Paint p, String glyph, float x, float y, float w, float h, float stroke) {
+        p.setStrokeWidth(stroke);
+        p.setStrokeJoin(Paint.Join.ROUND);
+        switch (glyph) {
+            case "Game console": {
+                // A pill with a grip hanging from each end; a d-pad on the left, two buttons on the right.
+                Path pad = new Path(), grips = new Path();
+                float in = stroke / 2; // keep the outline inside the box
+                pad.addRoundRect(x + in, y + in, x + w - in, y + h * 0.66f, h * 0.3f, h * 0.3f, Path.Direction.CW);
+                float r = h * 0.3f;
+                grips.addCircle(x + r + in, y + h - r - in, r, Path.Direction.CW);
+                grips.addCircle(x + w - r - in, y + h - r - in, r, Path.Direction.CW);
+                pad.op(grips, Path.Op.UNION);
+                p.setStyle(Paint.Style.STROKE);
+                c.drawPath(pad, p);
+                p.setStyle(Paint.Style.FILL);
+                float dx = x + w * 0.27f, dy = y + h * 0.36f, arm = h * 0.15f, t = h * 0.055f;
+                c.drawRect(dx - arm, dy - t, dx + arm, dy + t, p);
+                c.drawRect(dx - t, dy - arm, dx + t, dy + arm, p);
+                c.drawCircle(x + w * 0.67f, y + h * 0.42f, h * 0.065f, p);
+                c.drawCircle(x + w * 0.78f, y + h * 0.27f, h * 0.065f, p);
+                break;
+            }
+            case "Set-top box": {
+                // A flat box on two feet, with a slot and a power light.
+                float in = stroke / 2, bottom = y + h * 0.8f;
+                p.setStyle(Paint.Style.STROKE);
+                c.drawRoundRect(x + in, y + in, x + w - in, bottom, h * 0.12f, h * 0.12f, p);
+                p.setStyle(Paint.Style.FILL);
+                float mid = (y + bottom) / 2;
+                c.drawRect(x + w * 0.12f, mid - h * 0.05f, x + w * 0.5f, mid + h * 0.05f, p);
+                c.drawCircle(x + w * 0.82f, mid, h * 0.09f, p);
+                c.drawRect(x + w * 0.1f, bottom, x + w * 0.2f, y + h, p);
+                c.drawRect(x + w * 0.8f, bottom, x + w * 0.9f, y + h, p);
+                break;
+            }
+            case "Disc player": {
+                // A disc: the rim, the hub, and a glint between them.
+                float cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2 - stroke / 2;
+                p.setStyle(Paint.Style.STROKE);
+                c.drawCircle(cx, cy, r, p);
+                c.drawArc(cx - r * 0.65f, cy - r * 0.65f, cx + r * 0.65f, cy + r * 0.65f, 200, 60, false, p);
+                p.setStyle(Paint.Style.FILL);
+                c.drawCircle(cx, cy, r * 0.22f, p);
+                break;
+            }
+            case "Computer": {
+                // A monitor on a stand.
+                float in = stroke / 2, bottom = y + h * 0.72f, cx = x + w / 2;
+                p.setStyle(Paint.Style.STROKE);
+                c.drawRoundRect(x + in, y + in, x + w - in, bottom, h * 0.06f, h * 0.06f, p);
+                p.setStyle(Paint.Style.FILL);
+                c.drawRect(cx - w * 0.06f, bottom, cx + w * 0.06f, y + h * 0.9f, p);
+                c.drawRoundRect(cx - w * 0.26f, y + h * 0.88f, cx + w * 0.26f, y + h, stroke / 2, stroke / 2, p);
+                break;
+            }
+            case "Name only":
+                break;
+            default:
+                drawHdmi(c, p, x, y, w, h, stroke);
+        }
     }
 
     /** A 16:9 banner for apps whose own is unusable: a white icon centred on a diagonal gradient. */

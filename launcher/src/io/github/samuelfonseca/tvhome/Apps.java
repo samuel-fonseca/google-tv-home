@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,6 +48,10 @@ final class Apps {
 
     private static final String PREFS = "home";
     private static final String KEY_DOCK = "dock";
+    // An input's look, by its key: KEY_GLYPH + "input:<id>". The home screen redraws its tiles when
+    // a key with either prefix changes.
+    static final String KEY_GLYPH = "glyph:";
+    static final String KEY_COLOUR = "colour:";
 
     private Apps() {}
 
@@ -111,14 +116,38 @@ final class Apps {
         return new App(pkg, String.valueOf(ri.loadLabel(pm)), banner, banner == null ? ri.loadIcon(pm) : null);
     }
 
-    /** A TV input, named by its label from Settings > Inputs (e.g. "Game console"), on a drawn banner. */
+    /**
+     * A TV input, named by its label from Settings > Inputs (e.g. "Game console"), on a drawn banner
+     * in the glyph and colour picked for it.
+     */
     private static App input(Context ctx, String key) {
         TvInputManager tim = (TvInputManager) ctx.getSystemService(Context.TV_INPUT_SERVICE);
         TvInputInfo info = tim == null ? null : tim.getTvInputInfo(key.substring(INPUT.length()));
         if (info == null) return null;
         CharSequence label = info.loadCustomLabel(ctx);
         if (label == null || label.length() == 0) label = info.loadLabel(ctx);
-        return new App(key, String.valueOf(label), Ui.textBanner(String.valueOf(label)), null);
+        Drawable banner = Ui.textBanner(String.valueOf(label), glyph(ctx, key),
+                Palette.find(Palette.TILES, colour(ctx, key)));
+        return new App(key, String.valueOf(label), banner, null);
+    }
+
+    /** The glyph on an input's tile, one of Ui.GLYPHS. */
+    static String glyph(Context ctx, String key) {
+        String g = prefs(ctx).getString(KEY_GLYPH + key, null);
+        return Arrays.asList(Ui.GLYPHS).contains(g) ? g : Ui.GLYPHS[0];
+    }
+
+    static void setGlyph(Context ctx, String key, String glyph) {
+        prefs(ctx).edit().putString(KEY_GLYPH + key, glyph).apply();
+    }
+
+    /** The colour of an input's tile, a Palette.TILES name. */
+    static String colour(Context ctx, String key) {
+        return Palette.find(Palette.TILES, prefs(ctx).getString(KEY_COLOUR + key, null)).name;
+    }
+
+    static void setColour(Context ctx, String key, String colour) {
+        prefs(ctx).edit().putString(KEY_COLOUR + key, colour).apply();
     }
 
     static boolean launch(Context ctx, String pkg, android.os.Bundle options) {

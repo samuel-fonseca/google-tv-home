@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -48,7 +49,6 @@ import java.util.concurrent.Executors;
  * Down from the dock scrolls the page up to a grid of every other app, like tvOS.
  */
 public class MainActivity extends Activity {
-    private static final long ROTATE_MS = 60_000;
     private static final long FADE_MS = 1_500;
     // The page scrolls on a spring, critically damped so it never overshoots: it eases in and out,
     // and a press during a scroll bends it towards the new row instead of restarting it.
@@ -60,10 +60,13 @@ public class MainActivity extends Activity {
     private static final String AUTHOR_X = "@oneofthesamuels";
     private static final String REPO = "github.com/samuel-fonseca/google-tv-home";
     private static final String UNINSTALL = "Uninstall";
+    private static final String ADD = "Add to dock";
+    private static final String LEFT = "Move left", RIGHT = "Move right", REMOVE = "Remove from dock";
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService decoder = Executors.newSingleThreadExecutor();
-    private final List<String[]> walls = new ArrayList<>(); // {resName, place, author, licence}
+    private final List<String[]> walls = new ArrayList<>(); // {resName, place, author, licence, category}
+    private Palette.Swatch plain; // the background colour instead of photos, or null
 
     private ImageView back, front;
     private View topScrim, bottomScrim;
@@ -84,6 +87,7 @@ public class MainActivity extends Activity {
     private int scrollTarget;
     private NowPlaying nowPlaying;
     private AlertDialog dialog;
+    private Customize customize;
     private int wall;
     private Highlight highlight;
     // The dock app to come back to. Kept by package as well as position, so it survives the dock
@@ -94,8 +98,31 @@ public class MainActivity extends Activity {
     private final Runnable rotate = new Runnable() {
         @Override public void run() {
             showWallpaper(wall + 1, true);
-            main.postDelayed(this, ROTATE_MS);
+            scheduleRotate();
         }
+    };
+
+    // Posted, so the two keys one choice can save make one change on screen.
+    private final Runnable backgroundChanged = () -> {
+        loadBackground();
+        showWallpaper(wall, true);
+        scheduleRotate();
+    };
+    private final Runnable tilesChanged = () -> {
+        gridDock = null;
+        buildDock();
+    };
+
+    // Customize home and the input menus save their choices; redraw what they change. Also hears
+    // choices made in All apps, which sits over this screen.
+    private final SharedPreferences.OnSharedPreferenceChangeListener customized = (prefs, key) -> {
+        Runnable r = key == null ? null
+                : key.startsWith(Wallpapers.KEY_PREFIX) ? backgroundChanged
+                : key.startsWith(Apps.KEY_GLYPH) || key.startsWith(Apps.KEY_COLOUR) ? tilesChanged
+                : null;
+        if (r == null) return;
+        main.removeCallbacks(r);
+        main.post(r);
     };
 
     private final Choreographer.FrameCallback scrollFrame = new Choreographer.FrameCallback() {
@@ -118,7 +145,8 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        walls.addAll(Wallpapers.list(this));
+        loadBackground();
+        customize = new Customize(this, () -> {}); // tiles redraw from the preferences (customized)
         setContentView(buildLayout());
         // The root paints black under the photo already; a window background too would fill the
         // screen once more every frame.
@@ -138,12 +166,13 @@ public class MainActivity extends Activity {
         f.addAction(Intent.ACTION_PACKAGE_CHANGED);
         f.addDataScheme("package");
         registerReceiver(packagesChanged, f);
+        Apps.prefs(this).registerOnSharedPreferenceChangeListener(customized);
     }
 
     @Override protected void onStart() {
         super.onStart();
         SettingsKey.ensureEnabled(this);
-        main.postDelayed(rotate, ROTATE_MS);
+        scheduleRotate();
         nowPlaying.start();
     }
 
@@ -178,6 +207,8 @@ public class MainActivity extends Activity {
     @Override protected void onDestroy() {
         Choreographer.getInstance().removeFrameCallback(scrollFrame);
         unregisterReceiver(packagesChanged);
+        Apps.prefs(this).unregisterOnSharedPreferenceChangeListener(customized);
+        main.removeCallbacksAndMessages(null);
         decoder.shutdownNow();
         nowPlaying.destroy();
         super.onDestroy();
@@ -187,16 +218,22 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         if (dialog != null) dialog.dismiss();
+        customize.dismiss();
         focusedIndex = 0;
         dockScroll.smoothScrollTo(0, 0);
         focusDock(0); // and the page scrolls back up with it
     }
 
-    // The remote's Options key opens the focused tile's menu, like a long press; Info, a note about
-    // this launcher. On key up, like a click, so the press doesn't also reach the dialog.
+    // The remote's Options key opens the focused tile's menu, like a long press, and Customize home
+    // anywhere else; Info, a note about this launcher. On key up, like a click, so the press doesn't
+    // also reach the dialog.
     @Override public boolean onKeyUp(int keyCode, KeyEvent event) {
         View f = getCurrentFocus();
-        if (keyCode == KeyEvent.KEYCODE_MENU && Apps.tilePkg(f) != null) return f.performLongClick();
+        if (keyCode == KeyEvent.KEYCODE_MENU) {
+            if (Apps.tilePkg(f) != null) return f.performLongClick();
+            customize.home();
+            return true;
+        }
         if (keyCode == KeyEvent.KEYCODE_INFO) {
             showAbout();
             return true;
@@ -462,12 +499,16 @@ public class MainActivity extends Activity {
     }
 
     private void addToDock(Apps.App app) {
-        List<String> choices = new ArrayList<>(Arrays.asList("Add to dock"));
+        List<String> choices = new ArrayList<>(Arrays.asList(ADD));
+        choices.addAll(Customize.tileItems(app.pkg));
         if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
+        choices.add(Customize.HOME);
+        String[] items = choices.toArray(new String[0]);
         dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(app.label)
-                .setItems(choices.toArray(new String[0]), (d, which) -> {
-                    if (which == 1) {
+                .setItems(items, (d, which) -> {
+                    if (customize.onTileItem(app, items[which])) return;
+                    if (items[which].equals(UNINSTALL)) {
                         Apps.uninstall(this, app.pkg);
                         return;
                     }
@@ -494,6 +535,7 @@ public class MainActivity extends Activity {
                 .setMessage("A minimal, ad-free home screen for Google TV.\n\n" + version
                         + "Author: "+ AUTHOR +" <"+ AUTHOR_X +"> \n\n" + REPO + "\nMIT License")
                 .setPositiveButton("OK", null)
+                .setNeutralButton(Customize.HOME, (d, w) -> customize.home())
                 .show();
     }
 
@@ -509,21 +551,26 @@ public class MainActivity extends Activity {
     private void editDock(Apps.App app) {
         List<String> pkgs = Apps.dock(this);
         int pos = pkgs.indexOf(app.pkg);
-        List<String> choices = new ArrayList<>(Arrays.asList("Move left", "Move right", "Remove from dock"));
+        List<String> choices = new ArrayList<>(Arrays.asList(LEFT, RIGHT, REMOVE));
+        choices.addAll(Customize.tileItems(app.pkg));
         if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
+        choices.add(Customize.HOME);
+        String[] items = choices.toArray(new String[0]);
         dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(app.label)
-                .setItems(choices.toArray(new String[0]), (d, which) -> {
-                    if (which == 3) {
+                .setItems(items, (d, which) -> {
+                    String item = items[which];
+                    if (customize.onTileItem(app, item)) return;
+                    if (item.equals(UNINSTALL)) {
                         Apps.uninstall(this, app.pkg);
                         return;
                     }
                     // Focus follows a moved app by package (see buildDock).
-                    if (which == 0 && pos > 0) {
+                    if (item.equals(LEFT) && pos > 0) {
                         pkgs.add(pos - 1, pkgs.remove(pos));
-                    } else if (which == 1 && pos < pkgs.size() - 1) {
+                    } else if (item.equals(RIGHT) && pos < pkgs.size() - 1) {
                         pkgs.add(pos + 1, pkgs.remove(pos));
-                    } else if (which == 2) {
+                    } else if (item.equals(REMOVE)) {
                         pkgs.remove(pos);
                     }
                     Apps.saveDock(this, pkgs);
@@ -624,13 +671,28 @@ public class MainActivity extends Activity {
 
     // --- Wallpapers ---
 
-    /** Decode off the main thread, then crossfade. */
+    /** The background picked in Customize home: photos from some categories, or a plain colour. */
+    private void loadBackground() {
+        plain = Wallpapers.colour(this);
+        walls.clear();
+        if (plain == null) walls.addAll(Wallpapers.chosen(this));
+    }
+
+    /** The next photo, after the wait picked in Customize home. None for a plain colour, or Never. */
+    private void scheduleRotate() {
+        main.removeCallbacks(rotate);
+        int minutes = Wallpapers.minutes(this);
+        if (plain == null && minutes > 0 && walls.size() > 1) main.postDelayed(rotate, minutes * 60_000L);
+    }
+
+    /** Decode off the main thread (or draw the plain colour), then crossfade. */
     private void showWallpaper(int index, boolean fade) {
-        if (walls.isEmpty()) return;
-        final int i = ((index % walls.size()) + walls.size()) % walls.size();
-        final String[] w = walls.get(i);
+        final Palette.Swatch colour = plain;
+        if (colour == null && walls.isEmpty()) return;
+        final int i = colour != null ? wall : ((index % walls.size()) + walls.size()) % walls.size();
+        final String[] w = colour != null ? null : walls.get(i);
         decoder.execute(() -> {
-            Bitmap bmp = Wallpapers.decode(this, w[0]);
+            Bitmap bmp = w == null ? Wallpapers.plain(colour) : Wallpapers.decode(this, w[0]);
             Bitmap blurred = bmp == null ? null : Glass.Backdrop.blur(bmp);
             if (bmp != null) {
                 // Upload to the GPU now, rather than in the first frame of the crossfade.
@@ -642,8 +704,8 @@ public class MainActivity extends Activity {
                 backdrop.set(blurred, fade ? FADE_MS : 0);
                 wall = i;
                 Apps.prefs(this).edit().putInt(KEY_WALL, i).apply();
-                place.setText(w[1]);
-                credit.setText("Photo: " + w[2] + " · " + w[3]);
+                place.setText(w == null ? "" : w[1]);
+                credit.setText(w == null ? "" : "Photo: " + w[2] + " · " + w[3]);
                 if (!fade) {
                     back.setImageBitmap(bmp);
                     return;

@@ -22,10 +22,14 @@ import java.util.List;
 
 /**
  * Every launchable app in a grid, over the dimmed home screen. Long-press or Options to add to the
- * dock or uninstall.
+ * dock, uninstall, or for a TV input change its tile's icon and colour.
  */
 public class AllAppsActivity extends Activity {
     private static final int COLUMNS = 5;
+    private static final String UNINSTALL = "Uninstall";
+    private static final String KEY_FOCUS = "focus";
+
+    private Customize customize;
 
     // An app uninstalled from here: lay the grid out again without it.
     private final BroadcastReceiver removed = new BroadcastReceiver() {
@@ -36,6 +40,7 @@ public class AllAppsActivity extends Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        customize = new Customize(this, this::recreate); // show an input's new look here too
         int margin = Ui.dp(this, 48);
         int gap = Ui.dp(this, 26);
         int width = (getResources().getDisplayMetrics().widthPixels - 2 * margin - (COLUMNS - 1) * gap) / COLUMNS;
@@ -85,14 +90,23 @@ public class AllAppsActivity extends Activity {
         scroll.setBackgroundColor(0xE6101418); // the window dim alone lets the dock show through
         scroll.addView(page);
         setContentView(scroll);
-        if (grid.getChildCount() > 0) grid.getChildAt(0).requestFocus();
+        // Laid out again for an input's new look: stay on the tile that was changed.
+        View back = state == null ? null : grid.findViewWithTag(state.getString(KEY_FOCUS));
+        if (back != null) back.requestFocus();
+        else if (grid.getChildCount() > 0) grid.getChildAt(0).requestFocus();
 
         IntentFilter f = new IntentFilter(Intent.ACTION_PACKAGE_REMOVED);
         f.addDataScheme("package");
         registerReceiver(removed, f);
     }
 
+    @Override protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putString(KEY_FOCUS, Apps.tilePkg(getCurrentFocus()));
+    }
+
     @Override protected void onDestroy() {
+        customize.dismiss();
         unregisterReceiver(removed);
         super.onDestroy();
     }
@@ -111,11 +125,15 @@ public class AllAppsActivity extends Activity {
         List<String> dock = Apps.dock(this);
         boolean inDock = dock.contains(app.pkg);
         List<String> choices = new ArrayList<>(Arrays.asList(inDock ? "Remove from dock" : "Add to dock"));
-        if (Apps.canUninstall(this, app.pkg)) choices.add("Uninstall");
+        choices.addAll(Customize.tileItems(app.pkg));
+        if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
+        choices.add(Customize.HOME);
+        String[] items = choices.toArray(new String[0]);
         new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle(app.label)
-                .setItems(choices.toArray(new String[0]), (d, w) -> {
-                    if (w == 1) {
+                .setItems(items, (d, w) -> {
+                    if (customize.onTileItem(app, items[w])) return;
+                    if (items[w].equals(UNINSTALL)) {
                         Apps.uninstall(this, app.pkg);
                         return;
                     }

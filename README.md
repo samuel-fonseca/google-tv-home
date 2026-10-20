@@ -27,14 +27,18 @@ TV back the way it was.
 - **Now playing:** a card for whatever is playing in the background (Spotify, say), with art,
   progress and playback controls. Hidden when nothing is playing.
 - **Focus highlight** that springs from tile to tile as you move with the remote.
-- **Rotating wallpapers** from Wikimedia Commons featured pictures, with credits on screen.
+- **Rotating wallpapers** from Wikimedia Commons featured pictures, with credits on screen: lakes,
+  mountains, forests, coasts and night skies. Pick which categories to show, how often the photo
+  changes, or a plain dark colour instead.
+- **Input tiles your way:** give an HDMI input an icon (game console, set-top box, disc player,
+  computer, or none) and a colour.
 - **Screensaver** (optional): the same photos crossfading, with the time and date.
 - **Quick access** to the input switcher, All apps and Settings, top right.
 - **Settings button works again:** with the stock launcher disabled, the remote's Settings key
   does nothing; the launcher catches it and opens Settings from any app.
 - **Options and Info buttons:** Options opens a tile's menu, the same as a long-press, where apps
-  you installed can also be uninstalled. Info shows the launcher's version and where it's from;
-  in All apps, it opens the app's page in Settings.
+  you installed can also be uninstalled; anywhere else, it opens Customize home. Info shows the
+  launcher's version and where it's from; in All apps, it opens the app's page in Settings.
 - **Fully reversible** debloat, with a backup taken before anything changes.
 
 ## Requirements
@@ -78,6 +82,12 @@ updates must be signed with the same key, or the old build has to be uninstalled
 
 ### Customising
 
+- **On the TV:** press Options (or long-press a tile) and pick *Customize home* for the
+  background: photos from the categories you choose, or a plain colour, and how often the photo
+  changes. An input tile's menu also has *Change icon* and *Change colour*. Info opens Customize
+  home too.
+- **Wallpapers:** photos and their categories are listed in `launcher/res/raw/walls.txt`, with
+  credits in [`launcher/WALLPAPERS.md`](launcher/WALLPAPERS.md).
 - **Default dock:** edit `launcher/res/raw/dock.txt`. Changes made on the TV override it.
 - **Screensaver:** turn it on with
   ```sh

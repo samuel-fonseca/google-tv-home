@@ -51,7 +51,7 @@ class RepoFilesTest {
         List<String> lines = Files.readAllLines(LAUNCHER.resolve("res/raw/walls.txt"));
         lines.removeIf(String::isBlank);
         try (BufferedReader r = open(LAUNCHER.resolve("res/raw/walls.txt"))) {
-            assertEquals(lines.size(), Lists.wallpapers(r).size(), "a walls.txt line doesn't have 4 fields");
+            assertEquals(lines.size(), Lists.wallpapers(r).size(), "a walls.txt line doesn't have 5 fields");
         }
     }
 

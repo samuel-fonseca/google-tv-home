@@ -1,18 +1,33 @@
-wall_01|Lake Louise, Canada|Chensiyuan|CC BY-SA 4.0
-wall_02|Lake Sils, Switzerland|Hansueli Krapf|CC BY-SA 3.0
-wall_03|Spullersee, Austria|Böhringer Friedrich|CC BY-SA 3.0 at
-wall_04|Lago do Cuniã, Brazil|RodrigoErse|CC BY-SA 4.0
-wall_05|Kathleen Lake, Yukon|Jakub Fryš|CC BY-SA 4.0
-wall_06|Loch Tummel, Scotland|Eric Kilby|CC BY-SA 4.0
-wall_07|Pic du Midi d'Ossau, France|Myrabella|CC BY-SA 3.0
-wall_08|Tennfjorden, Norway|Ximonic (Simo Räsänen)|CC BY-SA 3.0
-wall_09|Dzükou Valley, India|Samudra Bikash Hazarika / UnpetitproleX|CC BY-SA 4.0
-wall_10|Breiðamerkurjökull, Iceland|Jakub Hałun|CC BY 4.0
-wall_11|Flatirons, Colorado|Tyler Cipriani|CC BY-SA 4.0
-wall_12|Gullmarsskogen, Sweden|W.carter|CC0
-wall_13|Birch wood, Belarus|George Chernilevsky|Public domain
-wall_14|Mount Shasta, California|Radomianin|CC BY-SA 4.0
-wall_15|Wilderness|David Marcu|CC0
-wall_16|Vallée de Gavarnie, France|Moahim|CC BY-SA 4.0
-wall_17|Robson Valley, British Columbia|Jakub Fryš|CC BY-SA 4.0
-wall_18|Fanal laurel forest, Madeira|Dietmar Rabich|CC BY-SA 4.0
+wall_01|Lake Louise, Canada|Chensiyuan|CC BY-SA 4.0|Lakes
+wall_02|Lake Sils, Switzerland|Hansueli Krapf|CC BY-SA 3.0|Lakes
+wall_03|Spullersee, Austria|Böhringer Friedrich|CC BY-SA 3.0 at|Mountains
+wall_04|Lago do Cuniã, Brazil|RodrigoErse|CC BY-SA 4.0|Lakes
+wall_05|Kathleen Lake, Yukon|Jakub Fryš|CC BY-SA 4.0|Lakes
+wall_06|Loch Tummel, Scotland|Eric Kilby|CC BY-SA 4.0|Lakes
+wall_07|Pic du Midi d'Ossau, France|Myrabella|CC BY-SA 3.0|Lakes
+wall_08|Tennfjorden, Norway|Ximonic (Simo Räsänen)|CC BY-SA 3.0|Lakes
+wall_09|Dzükou Valley, India|Samudra Bikash Hazarika / UnpetitproleX|CC BY-SA 4.0|Mountains
+wall_10|Breiðamerkurjökull, Iceland|Jakub Hałun|CC BY 4.0|Mountains
+wall_11|Flatirons, Colorado|Tyler Cipriani|CC BY-SA 4.0|Mountains
+wall_12|Gullmarsskogen, Sweden|W.carter|CC0|Forests
+wall_13|Birch wood, Belarus|George Chernilevsky|Public domain|Forests
+wall_14|Mount Shasta, California|Radomianin|CC BY-SA 4.0|Lakes
+wall_15|Wilderness|David Marcu|CC0|Mountains
+wall_16|Vallée de Gavarnie, France|Moahim|CC BY-SA 4.0|Mountains
+wall_17|Robson Valley, British Columbia|Jakub Fryš|CC BY-SA 4.0|Mountains
+wall_18|Fanal laurel forest, Madeira|Dietmar Rabich|CC BY-SA 4.0|Forests
+wall_19|Kjeungskjær Lighthouse, Norway|Gordon Leggett|CC BY-SA 4.0|Coasts
+wall_20|Lofoten, Norway|Johannes Groll|CC0|Night skies
+wall_21|Birks of Aberfeldy, Scotland|Eric Kilby|CC BY-SA 4.0|Forests
+wall_22|Cala de la Granadella, Spain|Diego Delso|CC BY-SA 4.0|Coasts
+wall_23|Bontecou Lake, New York|Juliancolton|CC BY-SA 4.0|Night skies
+wall_24|Börnste, Germany|Dietmar Rabich|CC BY-SA 4.0|Forests
+wall_25|Étretat, France|Jörg Braukmann|CC BY-SA 4.0|Coasts
+wall_26|Northern lights, Estonia|Kristian Pikner|CC BY-SA 4.0|Night skies
+wall_27|Roruper Holz, Germany|Dietmar Rabich|CC BY-SA 4.0|Forests
+wall_28|Elliðaey, Iceland|Diego Delso|CC BY-SA 4.0|Coasts
+wall_29|Bear Lake, Alaska|Joshua Strang, U.S. Air Force|Public domain|Night skies
+wall_30|Twelve Apostles, Australia|Dietmar Rabich|CC BY-SA 4.0|Coasts
+wall_31|Pedra Azul, Brazil|EduardoMSNeves|CC BY-SA 4.0|Night skies
+wall_32|Second Beach, Washington|King of Hearts|CC BY-SA 4.0|Coasts
+wall_33|Milky Way, Estonia|Kristian Pikner|CC BY-SA 4.0|Night skies
