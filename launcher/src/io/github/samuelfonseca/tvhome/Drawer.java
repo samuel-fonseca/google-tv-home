@@ -73,8 +73,9 @@ final class Drawer extends FrameLayout {
     }
 
     /**
-     * @param shade darkens what's behind the panel. Not a scrim over the screen: on the TV's GPU, a
-     *     full-screen fill fading in made the slide drop frames.
+     * @param shade darkens what's behind the panel: the home screen dims its photo, which keeps the
+     *     dock bright and adds no view over the whole screen. Either way the shading costs the
+     *     TV's GPU about 3ms a frame while the panel slides.
      */
     Drawer(Context ctx, Shade shade) {
         super(ctx);
