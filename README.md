@@ -13,15 +13,15 @@ TV back the way it was.
 
 ![Home screen: the now-playing card and the dock on glass panels](docs/screenshots/now-playing.jpg)
 
-| | | |
-|---|---|---|
-| ![App grid below the dock](docs/screenshots/app-grid.jpg) | ![Screensaver: a photo with the time and credit](docs/screenshots/screensaver.jpg) | ![All apps, with an HDMI input at the end](docs/screenshots/all-apps.jpg) |
-| Down from the dock: every other app, in a grid | Screensaver: the photos, with a clock that moves each minute | All apps, then TV inputs; long-press to add one to the dock |
+| | |
+|---|---|
+| ![App grid below the dock](docs/screenshots/app-grid.jpg) | ![Screensaver: a photo with the time and credit](docs/screenshots/screensaver.jpg) |
+| Down from the dock: every other app, then TV inputs; long-press to add one to the dock | Screensaver: the photos, with a clock that moves each minute |
 
 ## Features
 
 - **Dock** of your favourite apps on a frosted-glass band. Long-press a tile to move or remove
-  it; long-press in All apps to add one. TV inputs (HDMI ports) can go in the dock too.
+  it; long-press one in the app grid to add it. TV inputs (HDMI ports) can go in the dock too.
 - **App grid:** press down from the dock and every other app scrolls into view. Back returns
   to the dock.
 - **Now playing:** a card for whatever is playing in the background (Spotify, say), with art,
@@ -33,12 +33,13 @@ TV back the way it was.
 - **Input tiles your way:** give an HDMI input an icon (game console, set-top box, disc player,
   computer, or none) and a colour.
 - **Screensaver** (optional): the same photos crossfading, with the time and date.
-- **Quick access** to the input switcher, All apps and Settings, top right.
+- **Quick access** to the input switcher and Settings, top right; each spells out its name when
+  focused.
 - **Settings button works again:** with the stock launcher disabled, the remote's Settings key
   does nothing; the launcher catches it and opens Settings from any app.
 - **Options and Info buttons:** Options opens a tile's menu, the same as a long-press, where apps
   you installed can also be uninstalled; anywhere else, it opens Customize home. Info shows the
-  launcher's version and where it's from; in All apps, it opens the app's page in Settings.
+  launcher's version and where it's from.
 - **Fully reversible** debloat, with a backup taken before anything changes.
 
 ## Requirements

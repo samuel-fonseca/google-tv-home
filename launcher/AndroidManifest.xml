@@ -66,12 +66,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".AllAppsActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:theme="@style/Home.Overlay" />
-
         <!-- Lets the now-playing card see other apps' media sessions. See MediaListener. -->
         <service
             android:name=".MediaListener"

@@ -6,12 +6,4 @@
         <item name="android:windowAnimationStyle">@android:style/Animation.Activity</item>
         <item name="android:colorAccent">#FFFFFFFF</item>
     </style>
-
-    <!-- All apps sits over the home screen, so the wallpaper shows through, dimmed. -->
-    <style name="Home.Overlay">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:backgroundDimEnabled">true</item>
-        <item name="android:backgroundDimAmount">0.7</item>
-    </style>
 </resources>

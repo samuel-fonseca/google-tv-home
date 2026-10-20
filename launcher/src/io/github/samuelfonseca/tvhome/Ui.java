@@ -1,5 +1,6 @@
 package io.github.samuelfonseca.tvhome;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -22,7 +23,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Shared look: rounded app cards that lift on focus, round icon buttons, and their icons. */
+/** Shared look: rounded app cards that lift on focus, round icon buttons, top-bar buttons that spell out their names on focus, and their icons. */
 final class Ui {
     static final Typeface LIGHT = Typeface.create("sans-serif-light", Typeface.NORMAL);
     static final Typeface MEDIUM = Typeface.create("sans-serif-medium", Typeface.NORMAL);
@@ -135,6 +136,59 @@ final class Ui {
             bg.setColor(focused ? Color.WHITE : 0x33FFFFFF);
             icon.setTint(focused ? 0xFF111111 : Color.WHITE);
             v.animate().scaleX(focused ? 1.15f : 1f).scaleY(focused ? 1.15f : 1f).setDuration(140).start();
+        });
+        return b;
+    }
+
+    /**
+     * A top-bar button: round with just its icon, and on focus white, widening into a pill that
+     * spells out {@code label} beside the icon.
+     */
+    static View labelButton(Context ctx, Drawable icon, String label) {
+        int size = dp(ctx, 40), pad = dp(ctx, 10);
+        LinearLayout b = new LinearLayout(ctx);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setFocusable(true);
+        b.setContentDescription(label);
+        b.setPadding(pad, 0, pad, 0);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(size / 2f); // a circle while it's only as wide as it is tall
+        bg.setColor(0x33FFFFFF);
+        b.setBackground(bg);
+        ImageView iv = new ImageView(ctx);
+        iv.setImageDrawable(icon);
+        b.addView(iv, new LinearLayout.LayoutParams(size - 2 * pad, size - 2 * pad));
+
+        // The label's width grows from nothing on focus, clipping the text, so it reads out from
+        // the icon as the pill widens.
+        TextView text = new TextView(ctx);
+        text.setText(label);
+        text.setTextSize(14);
+        text.setTypeface(MEDIUM);
+        text.setTextColor(0xFF111111);
+        text.setSingleLine(true);
+        text.setPadding(dp(ctx, 8), 0, dp(ctx, 4), 0);
+        text.setAlpha(0f);
+        int full = (int) Math.ceil(text.getPaint().measureText(label))
+                + text.getPaddingLeft() + text.getPaddingRight();
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, -2);
+        b.addView(text, tlp);
+        b.setLayoutParams(new ViewGroup.MarginLayoutParams(-2, size));
+
+        ValueAnimator grow = new ValueAnimator();
+        grow.setDuration(160);
+        grow.setInterpolator(EASE);
+        grow.addUpdateListener(a -> {
+            tlp.width = (int) a.getAnimatedValue();
+            text.requestLayout();
+        });
+        b.setOnFocusChangeListener((v, focused) -> {
+            bg.setColor(focused ? Color.WHITE : 0x33FFFFFF);
+            icon.setTint(focused ? 0xFF111111 : Color.WHITE);
+            grow.cancel();
+            grow.setIntValues(tlp.width, focused ? full : 0);
+            grow.start();
+            text.animate().alpha(focused ? 1f : 0f).setDuration(160).start();
         });
         return b;
     }
@@ -318,18 +372,6 @@ final class Ui {
             @Override void draw(Canvas c, float w, float h) {
                 float iw = w * 0.92f, ih = iw * 0.55f;
                 drawHdmi(c, paint, (w - iw) / 2, (h - ih) / 2, iw, ih, ih * 0.2f);
-            }
-        };
-    }
-
-    /** 3x3 dot grid: "all apps". */
-    static Drawable gridIcon() {
-        return new IconDrawable() {
-            @Override void draw(Canvas c, float w, float h) {
-                float r = w / 10f;
-                for (int i = 0; i < 3; i++)
-                    for (int j = 0; j < 3; j++)
-                        c.drawCircle(w * (0.2f + 0.3f * i), h * (0.2f + 0.3f * j), r, paint);
             }
         };
     }

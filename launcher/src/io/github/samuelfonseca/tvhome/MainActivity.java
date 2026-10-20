@@ -113,8 +113,7 @@ public class MainActivity extends Activity {
         buildDock();
     };
 
-    // Customize home and the input menus save their choices; redraw what they change. Also hears
-    // choices made in All apps, which sits over this screen.
+    // Customize home and the input menus save their choices; redraw what they change.
     private final SharedPreferences.OnSharedPreferenceChangeListener customized = (prefs, key) -> {
         Runnable r = key == null ? null
                 : key.startsWith(Wallpapers.KEY_PREFIX) ? backgroundChanged
@@ -179,7 +178,7 @@ public class MainActivity extends Activity {
     /**
      * Back from an app: an input may have been renamed in Settings. Nothing else needs a rebuild,
      * which would reload every banner from its APK on the way back: apps that come, go or change
-     * are caught by packagesChanged, and dock edits in All apps by onResume.
+     * are caught by packagesChanged.
      */
     @Override protected void onRestart() {
         super.onRestart();
@@ -189,10 +188,8 @@ public class MainActivity extends Activity {
         }
     }
 
-    // All apps is translucent, so this activity only pauses behind it and onRestart doesn't run.
     @Override protected void onResume() {
         super.onResume();
-        if (!Apps.dock(this).equals(shownDock)) buildDock();
         // Back from an app opened from the grid: stay where you were.
         View f = getCurrentFocus();
         if (f == null || !isInside(f, grid)) focusDock(focusedIndex);
@@ -315,30 +312,25 @@ public class MainActivity extends Activity {
         clp.setMargins(margin, Ui.dp(this, 28), 0, 0);
         first.addView(clock, clp);
 
-        // Top right: inputs, all apps and settings buttons, with the photo credit underneath.
+        // Top right: inputs and settings buttons, with the photo credit underneath.
         LinearLayout right = new LinearLayout(this);
         right.setOrientation(LinearLayout.VERTICAL);
         right.setGravity(Gravity.END);
-        right.setClipChildren(false); // focused buttons scale past their bounds
         LinearLayout buttons = new LinearLayout(this);
-        buttons.setClipChildren(false);
-        View inputs = Ui.roundButton(this, Ui.inputIcon(), "Inputs");
+        View inputs = Ui.labelButton(this, Ui.inputIcon(), "Inputs");
         inputs.setOnClickListener(v -> openInputs());
-        View allApps = Ui.roundButton(this, Ui.gridIcon(), "All apps");
-        allApps.setOnClickListener(v -> startActivity(new Intent(this, AllAppsActivity.class)));
-        View settings = Ui.roundButton(this, Ui.gearIcon(), "Settings");
+        View settings = Ui.labelButton(this, Ui.gearIcon(), "Settings");
         settings.setOnClickListener(v -> startActivity(
                 new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
         // The ends of the row stop the remote, instead of falling through to the nearest tile.
         Ui.endOfRow(inputs, View.FOCUS_LEFT);
         Ui.endOfRow(settings, View.FOCUS_RIGHT);
         buttons.addView(inputs);
-        for (View b : new View[] {allApps, settings}) {
-            LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(Ui.dp(this, 40), Ui.dp(this, 40));
-            gap.leftMargin = Ui.dp(this, 14);
-            buttons.addView(b, gap);
-        }
-        // Wrap content, so each row hugs the right edge and the column resizes with the caption.
+        LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-2, Ui.dp(this, 40));
+        gap.leftMargin = Ui.dp(this, 14);
+        buttons.addView(settings, gap);
+        // Wrap content, so each row hugs the right edge and the column resizes with the caption,
+        // or with a button as it widens.
         right.addView(buttons, new LinearLayout.LayoutParams(-2, -2));
         place = new TextView(this);
         Ui.style(place, 13, Ui.MEDIUM, 0xE6FFFFFF);
