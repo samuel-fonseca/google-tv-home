@@ -37,6 +37,8 @@ final class Glass extends Drawable {
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gloss = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint wash = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private int washColor;
     private final RectF box = new RectF();
     private final Matrix place = new Matrix();
     private final int[] where = new int[2];
@@ -99,6 +101,11 @@ final class Glass extends Drawable {
         }
         gloss.setAlpha(a);
         c.drawRoundRect(box, radius, radius, gloss);
+        if (washColor != 0) {
+            wash.setColor(washColor);
+            wash.setAlpha(Math.round((washColor >>> 24) * a / 255f));
+            c.drawRoundRect(box, radius, radius, wash);
+        }
         if (layer) c.restoreToCount(save);
 
         float o = edge / 2;
@@ -117,6 +124,12 @@ final class Glass extends Drawable {
         image.setShader(s);
         image.setAlpha(a);
         c.drawRoundRect(box, radius, radius, image);
+    }
+
+    /** A colour laid over the glass, as when a button lights up on focus; 0 for none. */
+    void setWash(int color) {
+        washColor = color;
+        invalidateSelf();
     }
 
     @Override public void setAlpha(int a) {

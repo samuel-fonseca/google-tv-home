@@ -141,19 +141,16 @@ final class Ui {
     }
 
     /**
-     * A top-bar button: round with just its icon on {@code glass}, and on focus white, widening
-     * into a pill that spells out {@code label} beside the icon.
+     * A top-bar button: round with just its icon on {@code glass}, and on focus frosted white,
+     * widening into a pill that spells out {@code label} beside the icon.
      */
-    static View labelButton(Context ctx, Drawable icon, String label, Drawable glass) {
+    static View labelButton(Context ctx, Drawable icon, String label, Glass glass) {
         int size = dp(ctx, 40), pad = dp(ctx, 10);
         LinearLayout b = new LinearLayout(ctx);
         b.setGravity(Gravity.CENTER_VERTICAL);
         b.setFocusable(true);
         b.setContentDescription(label);
         b.setPadding(pad, 0, pad, 0);
-        GradientDrawable white = new GradientDrawable();
-        white.setCornerRadius(size / 2f); // a circle while it's only as wide as it is tall
-        white.setColor(Color.WHITE);
         b.setBackground(glass);
         ImageView iv = new ImageView(ctx);
         iv.setImageDrawable(icon);
@@ -183,7 +180,7 @@ final class Ui {
             text.requestLayout();
         });
         b.setOnFocusChangeListener((v, focused) -> {
-            v.setBackground(focused ? white : glass);
+            glass.setWash(focused ? 0xB3FFFFFF : 0); // white enough for dark text, still glass
             icon.setTint(focused ? 0xFF111111 : Color.WHITE);
             grow.cancel();
             grow.setIntValues(tlp.width, focused ? full : 0);
