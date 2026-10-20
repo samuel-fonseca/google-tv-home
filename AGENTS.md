@@ -11,7 +11,7 @@ what an agent needs on top of that.
 | `launcher/src/` | The launcher app, plain Java (no Kotlin, no AndroidX, no libraries) |
 | `launcher/test/` | JUnit tests for the Android-free classes and the repo's data files |
 | `launcher/res/raw/` | `dock.txt` (default dock), `walls.txt` (wallpapers and categories) |
-| `launcher/WALLPAPERS.md` | Credits and licences for every wallpaper |
+| `launcher/WALLPAPERS.md` | Credits and licenses for every wallpaper |
 | `launcher/*.sh` | `build.sh`, `test.sh`, `lint.sh`: the whole build system, no Gradle |
 | `tools/` | adb scripts that change the TV; all source `tools/common.sh` |
 | `config/debloat.txt` | Debloat list for the reference TV (TCL G13, Android 14) |

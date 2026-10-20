@@ -51,7 +51,8 @@ final class Apps {
     // An input's look, by its key: KEY_GLYPH + "input:<id>". The home screen redraws its tiles when
     // a key with either prefix changes.
     static final String KEY_GLYPH = "glyph:";
-    static final String KEY_COLOUR = "colour:";
+    // Saved under the British spelling by earlier versions; renaming it would lose every choice.
+    static final String KEY_COLOR = "colour:";
 
     private Apps() {}
 
@@ -118,7 +119,7 @@ final class Apps {
 
     /**
      * A TV input, named by its label from Settings > Inputs (e.g. "Game console"), on a drawn banner
-     * in the glyph and colour picked for it.
+     * in the glyph and color picked for it.
      */
     private static App input(Context ctx, String key) {
         TvInputManager tim = (TvInputManager) ctx.getSystemService(Context.TV_INPUT_SERVICE);
@@ -127,7 +128,7 @@ final class Apps {
         CharSequence label = info.loadCustomLabel(ctx);
         if (label == null || label.length() == 0) label = info.loadLabel(ctx);
         Drawable banner = Ui.textBanner(String.valueOf(label), glyph(ctx, key),
-                Palette.find(Palette.TILES, colour(ctx, key)));
+                Palette.find(Palette.TILES, color(ctx, key)));
         return new App(key, String.valueOf(label), banner, null);
     }
 
@@ -141,13 +142,13 @@ final class Apps {
         prefs(ctx).edit().putString(KEY_GLYPH + key, glyph).apply();
     }
 
-    /** The colour of an input's tile, a Palette.TILES name. */
-    static String colour(Context ctx, String key) {
-        return Palette.find(Palette.TILES, prefs(ctx).getString(KEY_COLOUR + key, null)).name;
+    /** The color of an input's tile, a Palette.TILES name. */
+    static String color(Context ctx, String key) {
+        return Palette.find(Palette.TILES, prefs(ctx).getString(KEY_COLOR + key, null)).name;
     }
 
-    static void setColour(Context ctx, String key, String colour) {
-        prefs(ctx).edit().putString(KEY_COLOUR + key, colour).apply();
+    static void setColor(Context ctx, String key, String color) {
+        prefs(ctx).edit().putString(KEY_COLOR + key, color).apply();
     }
 
     static boolean launch(Context ctx, String pkg, android.os.Bundle options) {

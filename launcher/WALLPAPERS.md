@@ -1,8 +1,8 @@
 # Wallpapers
 
-1280×720 crops of Wikimedia Commons featured pictures. Each photo's credit and licence also appear on screen, top right of the home screen.
+1280×720 crops of Wikimedia Commons featured pictures. Each photo's credit and license also appear on screen, top right of the home screen.
 
-| File | Place | Author | Licence | Category | Source |
+| File | Place | Author | License | Category | Source |
 |---|---|---|---|---|---|
 | wall_01 | Lake Louise, Canada | Chensiyuan | CC BY-SA 4.0 | Lakes | https://commons.wikimedia.org/wiki/File:1_lake_louise_pano_2019.jpg |
 | wall_02 | Lake Sils, Switzerland | Hansueli Krapf | CC BY-SA 3.0 | Lakes | https://commons.wikimedia.org/wiki/File:2011-08-01_10-31-42_Switzerland_Segl-Maria.jpg |

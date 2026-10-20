@@ -27,6 +27,7 @@ import android.widget.TextView;
 final class Ui {
     static final Typeface LIGHT = Typeface.create("sans-serif-light", Typeface.NORMAL);
     static final Typeface MEDIUM = Typeface.create("sans-serif-medium", Typeface.NORMAL);
+    static final Typeface REGULAR = Typeface.create("sans-serif", Typeface.NORMAL);
     /** How much a focused card grows. The home screen's highlight is drawn to match. */
     static final float FOCUS_SCALE = 1.08f;
     private static final DecelerateInterpolator EASE = new DecelerateInterpolator(2f);
@@ -85,7 +86,7 @@ final class Ui {
         // Text and shadow can take the fade's alpha separately; otherwise each frame of it renders
         // the label offscreen first.
         label.forceHasOverlappingRendering(false);
-        // Same width as the card, so the label never pushes neighbouring tiles apart.
+        // Same width as the card, so the label never pushes neighboring tiles apart.
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(width, -2);
         lp.topMargin = dp(ctx, 12);
         if (labelled) tile.addView(label, lp);
@@ -102,7 +103,7 @@ final class Ui {
         return tile;
     }
 
-    /** Text over a photo: size, face, colour, and a soft shadow so it reads on bright skies. */
+    /** Text over a photo: size, face, color, and a soft shadow so it reads on bright skies. */
     static void style(TextView t, float sp, Typeface face, int color) {
         t.setTextSize(sp);
         t.setTypeface(face);
@@ -197,7 +198,7 @@ final class Ui {
      * A 16:9 banner for things without one (TV inputs): a glyph from {@link #GLYPHS} and the name, in
      * white on one of the {@link Palette#TILES} gradients.
      */
-    static Drawable textBanner(String text, String glyph, Palette.Swatch colour) {
+    static Drawable textBanner(String text, String glyph, Palette.Swatch color) {
         return new Drawable() {
             final Paint bg = new Paint();
             final Paint ink = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -212,10 +213,10 @@ final class Ui {
             @Override public void draw(Canvas c) {
                 android.graphics.Rect b = getBounds();
                 bg.setShader(new android.graphics.LinearGradient(b.left, b.top, b.right, b.bottom,
-                        colour.from, colour.to, android.graphics.Shader.TileMode.CLAMP));
+                        color.from, color.to, android.graphics.Shader.TileMode.CLAMP));
                 c.drawRect(b, bg);
 
-                // Glyph, gap, then name, centred as one group.
+                // Glyph, gap, then name, centered as one group.
                 float[] box = glyphBox(glyph);
                 float ih = b.height() * box[0], iw = ih * box[1], gap = iw > 0 ? b.height() * 0.12f : 0;
                 ink.setTextSize(b.height() * 0.3f);
@@ -318,7 +319,7 @@ final class Ui {
         }
     }
 
-    /** A 16:9 banner for apps whose own is unusable: a white icon centred on a diagonal gradient. */
+    /** A 16:9 banner for apps whose own is unusable: a white icon centered on a diagonal gradient. */
     static Drawable iconBanner(Drawable icon, int from, int to) {
         return new Drawable() {
             final Paint bg = new Paint();
@@ -395,6 +396,157 @@ final class Ui {
         };
     }
 
+    /** Three sliders: "preferences". */
+    static Drawable tuneIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                paint.setStyle(Paint.Style.FILL);
+                float t = h * 0.09f, r = h * 0.13f;
+                float[] ys = {0.22f, 0.5f, 0.78f}, knobs = {0.68f, 0.32f, 0.58f};
+                for (int i = 0; i < ys.length; i++) {
+                    float y = h * ys[i];
+                    c.drawRoundRect(w * 0.06f, y - t / 2, w * 0.94f, y + t / 2, t / 2, t / 2, paint);
+                    c.drawCircle(w * knobs[i], y, r, paint);
+                }
+            }
+        };
+    }
+
+    /** A framed landscape, mountains under a sun: "background". */
+    static Drawable photoIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                float t = w * 0.08f;
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(t);
+                c.drawRoundRect(t / 2, h * 0.14f, w - t / 2, h * 0.86f, w * 0.1f, w * 0.1f, paint);
+                paint.setStyle(Paint.Style.FILL);
+                Path hills = new Path();
+                hills.moveTo(w * 0.18f, h * 0.74f);
+                hills.lineTo(w * 0.4f, h * 0.44f);
+                hills.lineTo(w * 0.56f, h * 0.64f);
+                hills.lineTo(w * 0.66f, h * 0.53f);
+                hills.lineTo(w * 0.82f, h * 0.74f);
+                hills.close();
+                c.drawPath(hills, paint);
+                c.drawCircle(w * 0.68f, h * 0.34f, w * 0.07f, paint);
+            }
+        };
+    }
+
+    /** Four rounded squares: "categories". */
+    static Drawable gridIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                paint.setStyle(Paint.Style.FILL);
+                float s = w * 0.36f, gap = w * 0.12f, x = (w - 2 * s - gap) / 2, y = (h - 2 * s - gap) / 2;
+                for (int i = 0; i < 4; i++) {
+                    float l = x + (i % 2) * (s + gap), t = y + (i / 2) * (s + gap);
+                    c.drawRoundRect(l, t, l + s, t + s, s * 0.25f, s * 0.25f, paint);
+                }
+            }
+        };
+    }
+
+    /** A clock face at ten past: "how often". */
+    static Drawable clockIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                float t = w * 0.09f, cx = w / 2, cy = h / 2;
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(t);
+                paint.setStrokeCap(Paint.Cap.ROUND);
+                c.drawCircle(cx, cy, w / 2 - t / 2, paint);
+                c.drawLine(cx, cy, cx, h * 0.24f, paint);
+                c.drawLine(cx, cy, w * 0.68f, h * 0.6f, paint);
+            }
+        };
+    }
+
+    /** An arrow pointing left, or right: "move". */
+    static Drawable arrowIcon(boolean left) {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                float t = w * 0.1f, tip = left ? w * 0.16f : w * 0.84f, back = left ? 1 : -1;
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(t);
+                paint.setStrokeCap(Paint.Cap.ROUND);
+                paint.setStrokeJoin(Paint.Join.ROUND);
+                c.drawLine(w * 0.16f, h / 2, w * 0.84f, h / 2, paint);
+                Path head = new Path();
+                head.moveTo(tip + back * w * 0.3f, h * 0.2f);
+                head.lineTo(tip, h / 2);
+                head.lineTo(tip + back * w * 0.3f, h * 0.8f);
+                c.drawPath(head, paint);
+            }
+        };
+    }
+
+    /** A plus: "add"; or just its bar, a minus: "remove". */
+    static Drawable plusIcon(boolean minus) {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                paint.setStyle(Paint.Style.FILL);
+                float t = w * 0.11f, r = t / 2;
+                c.drawRoundRect(w * 0.14f, (h - t) / 2, w * 0.86f, (h + t) / 2, r, r, paint);
+                if (!minus) c.drawRoundRect((w - t) / 2, h * 0.14f, (w + t) / 2, h * 0.86f, r, r, paint);
+            }
+        };
+    }
+
+    /** A bin with its lid: "uninstall". */
+    static Drawable binIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                float t = w * 0.09f;
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(t);
+                paint.setStrokeCap(Paint.Cap.ROUND);
+                paint.setStrokeJoin(Paint.Join.ROUND);
+                c.drawLine(w * 0.12f, h * 0.24f, w * 0.88f, h * 0.24f, paint);
+                c.drawLine(w * 0.4f, h * 0.1f, w * 0.6f, h * 0.1f, paint);
+                Path body = new Path();
+                body.moveTo(w * 0.22f, h * 0.24f);
+                body.lineTo(w * 0.28f, h * 0.9f);
+                body.lineTo(w * 0.72f, h * 0.9f);
+                body.lineTo(w * 0.78f, h * 0.24f);
+                c.drawPath(body, paint);
+                c.drawLine(w * 0.43f, h * 0.42f, w * 0.43f, h * 0.72f, paint);
+                c.drawLine(w * 0.57f, h * 0.42f, w * 0.57f, h * 0.72f, paint);
+            }
+        };
+    }
+
+    /** A drop of paint: "color". */
+    static Drawable dropIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                paint.setStyle(Paint.Style.FILL);
+                float cx = w / 2;
+                Path drop = new Path();
+                drop.moveTo(cx, h * 0.06f);
+                drop.cubicTo(cx + w * 0.42f, h * 0.48f, cx + w * 0.36f, h * 0.94f, cx, h * 0.94f);
+                drop.cubicTo(cx - w * 0.36f, h * 0.94f, cx - w * 0.42f, h * 0.48f, cx, h * 0.06f);
+                c.drawPath(drop, paint);
+            }
+        };
+    }
+
+    /** A ringed "i": "app info". */
+    static Drawable infoIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                float t = w * 0.09f, cx = w / 2;
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(t);
+                c.drawCircle(cx, h / 2, w / 2 - t / 2, paint);
+                paint.setStyle(Paint.Style.FILL);
+                c.drawCircle(cx, h * 0.3f, t * 0.8f, paint);
+                c.drawRoundRect(cx - t / 2, h * 0.43f, cx + t / 2, h * 0.74f, t / 2, t / 2, paint);
+            }
+        };
+    }
+
     /** Six rounded teeth around a large hole, like Google's Settings banner, without its fold line. */
     static Drawable roundGearIcon() {
         return new IconDrawable() {
@@ -425,7 +577,7 @@ final class Ui {
     }
 
     /**
-     * {@code shape} with a round hole through its centre. Cut from the path rather than cleared
+     * {@code shape} with a round hole through its center. Cut from the path rather than cleared
      * after drawing, which would need an offscreen layer every time the icon is drawn.
      */
     private static Path punch(Path shape, float cx, float cy, float r) {
@@ -475,7 +627,7 @@ final class Ui {
         }
     }
 
-    /** A triangle with its flat side at x = base and its point at x = tip, centred vertically. */
+    /** A triangle with its flat side at x = base and its point at x = tip, centered vertically. */
     private static Path triangle(float base, float tip, float h) {
         Path p = new Path();
         p.moveTo(base, h * 0.12f);

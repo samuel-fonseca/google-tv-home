@@ -126,7 +126,7 @@ final class Glass extends Drawable {
         c.drawRoundRect(box, radius, radius, image);
     }
 
-    /** A colour laid over the glass, as when a button lights up on focus; 0 for none. */
+    /** A color laid over the glass, as when a button lights up on focus; 0 for none. */
     void setWash(int color) {
         washColor = color;
         invalidateSelf();

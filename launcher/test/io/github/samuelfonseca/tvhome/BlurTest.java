@@ -12,7 +12,7 @@ class BlurTest {
         return (c >> 16) & 0xFF;
     }
 
-    @Test void flatColourStaysFlat() {
+    @Test void flatColorStaysFlat() {
         int[] px = new int[20 * 10];
         Arrays.fill(px, 0xFF336699);
         Blur.box(px, 20, 10, 3, 3);
@@ -25,9 +25,9 @@ class BlurTest {
         Arrays.fill(px, 0xFF000000);
         px[10 * w + 10] = 0xFFFFFFFF;
         Blur.box(px, w, h, 2, 3);
-        int centre = red(px[10 * w + 10]), near = red(px[10 * w + 12]), far = red(px[10 * w + 16]);
-        assertTrue(centre > near && near > far, centre + " " + near + " " + far);
-        assertTrue(centre < 255, "the dot should have spread out");
+        int center = red(px[10 * w + 10]), near = red(px[10 * w + 12]), far = red(px[10 * w + 16]);
+        assertTrue(center > near && near > far, center + " " + near + " " + far);
+        assertTrue(center < 255, "the dot should have spread out");
         assertEquals(0, red(px[0]), "a far corner stays black");
     }
 
@@ -50,7 +50,7 @@ class BlurTest {
         assertEquals(red(px[3 * w + 0]), red(px[3 * w + 8]), "symmetric along the line");
     }
 
-    @Test void overMixesInTheColourByItsAlpha() {
+    @Test void overMixesInTheColorByItsAlpha() {
         int[] px = {0xFFFFFFFF, 0xFF000000, 0xFF804020};
         Blur.over(px, 0x80000000); // half black
         assertEquals(0xFF7F7F7F, px[0]);
@@ -70,8 +70,8 @@ class BlurTest {
         assertEquals(0, px[15 * w + 15] >>> 24, "nothing inside the shape");
         int edge = px[15 * w + 9] >>> 24, further = px[15 * w + 6] >>> 24;
         assertTrue(edge > further && further > 0, edge + " " + further);
-        assertTrue(edge <= 0x40, "never brighter than the colour's alpha: " + edge);
+        assertTrue(edge <= 0x40, "never brighter than the color's alpha: " + edge);
         assertEquals(0, px[0] >>> 24, "fades out before the corner");
-        assertEquals(0xFFFFFF, px[15 * w + 9] & 0xFFFFFF, "in the glow's colour");
+        assertEquals(0xFFFFFF, px[15 * w + 9] & 0xFFFFFF, "in the glow's color");
     }
 }

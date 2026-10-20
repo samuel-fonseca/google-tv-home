@@ -21,7 +21,7 @@ final class Highlight extends View implements Choreographer.FrameCallback {
     private static final float STIFFNESS = 420f, DAMPING = 0.78f;
     private static final long FADE_NS = 140_000_000L;
 
-    // Centre and size rather than edges, so a move between same-sized tiles keeps its shape.
+    // Center and size rather than edges, so a move between same-sized tiles keeps its shape.
     private final Spring cx = new Spring(STIFFNESS, DAMPING), cy = new Spring(STIFFNESS, DAMPING);
     private final Spring w = new Spring(STIFFNESS, DAMPING), h = new Spring(STIFFNESS, DAMPING);
     private final Spring[] springs = {cx, cy, w, h};

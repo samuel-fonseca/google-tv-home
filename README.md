@@ -20,7 +20,7 @@ TV back the way it was.
 
 ## Features
 
-- **Dock** of your favourite apps on a frosted-glass band. Long-press a tile to move or remove
+- **Dock** of your favorite apps on a frosted-glass band. Long-press a tile to move or remove
   it; long-press one in the app grid to add it. TV inputs (HDMI ports) can go in the dock too.
 - **App grid:** press down from the dock and every other app scrolls into view. Back returns
   to the dock.
@@ -29,17 +29,19 @@ TV back the way it was.
 - **Focus highlight** that springs from tile to tile as you move with the remote.
 - **Rotating wallpapers** from Wikimedia Commons featured pictures, with credits on screen: lakes,
   mountains, forests, coasts and night skies. Pick which categories to show, how often the photo
-  changes, or a plain dark colour instead.
+  changes, or a plain dark color instead.
 - **Input tiles your way:** give an HDMI input an icon (game console, set-top box, disc player,
-  computer, or none) and a colour.
+  computer, or none) and a color.
 - **Screensaver** (optional): the same photos crossfading, with the time and date.
-- **Quick access** to the input switcher and Settings, top right; each spells out its name when
-  focused.
+- **Quick access** to the input switcher, Preferences and Settings, top right; each spells out
+  its name when focused.
+- **Side drawers** in the style of Google TV's own panels: Preferences and each app's menu slide
+  in from the right, instead of stock Android dialogs.
 - **Settings button works again:** with the stock launcher disabled, the remote's Settings key
   does nothing; the launcher catches it and opens Settings from any app.
-- **Options and Info buttons:** Options opens a tile's menu, the same as a long-press, where apps
-  you installed can also be uninstalled; anywhere else, it opens Customize home. Info shows the
-  launcher's version and where it's from.
+- **Options and Info buttons:** Options opens a tile's menu, the same as a long-press: move it,
+  add or remove it from the dock, App info, and Uninstall for apps you installed. Anywhere else,
+  Options opens Preferences, as does Info, with the launcher's version and where it's from.
 - **Fully reversible** debloat, with a backup taken before anything changes.
 
 ## Requirements
@@ -81,12 +83,11 @@ Gradle: the build is a single shell script.
 The first build creates a signing key at `launcher/keystore/release.jks` (gitignored). Keep it:
 updates must be signed with the same key, or the old build has to be uninstalled first.
 
-### Customising
+### Customizing
 
-- **On the TV:** press Options (or long-press a tile) and pick *Customize home* for the
-  background: photos from the categories you choose, or a plain colour, and how often the photo
-  changes. An input tile's menu also has *Change icon* and *Change colour*. Info opens Customize
-  home too.
+- **On the TV:** the *Preferences* button, top right (or Info on the remote), has the
+  background: photos from the categories you choose, or a plain color, and how often the photo
+  changes. An input tile's menu (Options, or long-press it) has its *Icon* and *Color*.
 - **Wallpapers:** photos and their categories are listed in `launcher/res/raw/walls.txt`, with
   credits in [`launcher/WALLPAPERS.md`](launcher/WALLPAPERS.md).
 - **Default dock:** edit `launcher/res/raw/dock.txt`. Changes made on the TV override it.
@@ -160,5 +161,5 @@ Found a bug? Open an issue with your TV model, Android version and steps to repr
 ## License
 
 [MIT](LICENSE). The wallpapers in `launcher/res/drawable-nodpi/` are not covered: each keeps
-its own Creative Commons licence or public-domain status, listed in
+its own Creative Commons license or public-domain status, listed in
 [`launcher/WALLPAPERS.md`](launcher/WALLPAPERS.md).

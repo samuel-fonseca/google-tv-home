@@ -19,7 +19,7 @@ final class Blur {
 
     /**
      * One direction: {@code lines} lines of {@code len} pixels; {@code step} is the distance
-     * between neighbours in a line, {@code lineStep} between the starts of lines.
+     * between neighbors in a line, {@code lineStep} between the starts of lines.
      */
     private static void pass(int[] in, int[] out, int len, int lines, int r, int step, int lineStep) {
         int n = 2 * r + 1;

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Named two-colour gradients, for TV input tiles and for plain backgrounds. Saved by name, so the
+ * Named two-color gradients, for TV input tiles and for plain backgrounds. Saved by name, so the
  * lists can be reordered. Plain Java, so the tests run without Android.
  */
 final class Palette {

@@ -2,15 +2,12 @@ package io.github.samuelfonseca.tvhome;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -36,37 +33,29 @@ import android.widget.ScrollView;
 import android.widget.TextClock;
 import android.widget.TextView;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * The home screen: rotating nature wallpaper, clock, what's playing, and a dock of favourite apps.
- * Down from the dock scrolls the page up to a grid of every other app, like tvOS.
+ * The home screen: rotating nature wallpaper, clock, what's playing, and a dock of favorite apps.
+ * Down from the dock scrolls the page up to a grid of every other app, like tvOS. Preferences and
+ * each app's menu slide in from the right (see Drawer).
  */
 public class MainActivity extends Activity {
     private static final long FADE_MS = 1_500;
     // The page scrolls on a spring, critically damped so it never overshoots: it eases in and out,
     // and a press during a scroll bends it towards the new row instead of restarting it.
     private static final float SCROLL_STIFFNESS = 500f;
-    private static final int DIM = 0x0A0C10; // the colour the photo darkens towards in the grid
+    private static final int DIM = 0x0A0C10; // the color the photo darkens towards in the grid
     private static final int COLUMNS = 6; // dock cards and grid columns line up
     private static final String KEY_WALL = "wall";
-    private static final String AUTHOR = "Sam Fonseca";
-    private static final String AUTHOR_X = "@oneofthesamuels";
-    private static final String REPO = "github.com/samuel-fonseca/google-tv-home";
-    private static final String UNINSTALL = "Uninstall";
-    private static final String ADD = "Add to dock";
-    private static final String LEFT = "Move left", RIGHT = "Move right", REMOVE = "Remove from dock";
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService decoder = Executors.newSingleThreadExecutor();
-    private final List<String[]> walls = new ArrayList<>(); // {resName, place, author, licence, category}
-    private Palette.Swatch plain; // the background colour instead of photos, or null
+    private final List<String[]> walls = new ArrayList<>(); // {resName, place, author, license, category}
+    private Palette.Swatch plain; // the background color instead of photos, or null
 
     private ImageView back, front;
     private View topScrim, bottomScrim;
@@ -86,8 +75,8 @@ public class MainActivity extends Activity {
     private long lastScrollFrame;
     private int scrollTarget;
     private NowPlaying nowPlaying;
-    private AlertDialog dialog;
-    private Customize customize;
+    private Drawer drawer;
+    private Menus menus;
     private int wall;
     private Highlight highlight;
     // The dock app to come back to. Kept by package as well as position, so it survives the dock
@@ -113,11 +102,11 @@ public class MainActivity extends Activity {
         buildDock();
     };
 
-    // Customize home and the input menus save their choices; redraw what they change.
+    // Preferences and the input menus save their choices; redraw what they change.
     private final SharedPreferences.OnSharedPreferenceChangeListener customized = (prefs, key) -> {
         Runnable r = key == null ? null
                 : key.startsWith(Wallpapers.KEY_PREFIX) ? backgroundChanged
-                : key.startsWith(Apps.KEY_GLYPH) || key.startsWith(Apps.KEY_COLOUR) ? tilesChanged
+                : key.startsWith(Apps.KEY_GLYPH) || key.startsWith(Apps.KEY_COLOR) ? tilesChanged
                 : null;
         if (r == null) return;
         main.removeCallbacks(r);
@@ -145,7 +134,6 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         loadBackground();
-        customize = new Customize(this, () -> {}); // tiles redraw from the preferences (customized)
         setContentView(buildLayout());
         // The root paints black under the photo already; a window background too would fill the
         // screen once more every frame.
@@ -211,35 +199,33 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    /** Home pressed while already home: close any menu and go back to the first app. */
+    /** Home pressed while already home: close any drawer and go back to the first app. */
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (dialog != null) dialog.dismiss();
-        customize.dismiss();
+        drawer.close();
         focusedIndex = 0;
         dockScroll.smoothScrollTo(0, 0);
         focusDock(0); // and the page scrolls back up with it
     }
 
-    // The remote's Options key opens the focused tile's menu, like a long press, and Customize home
-    // anywhere else; Info, a note about this launcher. On key up, like a click, so the press doesn't
-    // also reach the dialog.
+    // The remote's Options key opens the focused tile's menu, like a long press, and Preferences
+    // anywhere else; Info opens Preferences, which also says what this launcher is. Either closes
+    // an open drawer. On key up, like a click, so the press doesn't also reach the drawer.
     @Override public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode != KeyEvent.KEYCODE_MENU && keyCode != KeyEvent.KEYCODE_INFO) {
+            return super.onKeyUp(keyCode, event);
+        }
         View f = getCurrentFocus();
-        if (keyCode == KeyEvent.KEYCODE_MENU) {
-            if (Apps.tilePkg(f) != null) return f.performLongClick();
-            customize.home();
-            return true;
-        }
-        if (keyCode == KeyEvent.KEYCODE_INFO) {
-            showAbout();
-            return true;
-        }
-        return super.onKeyUp(keyCode, event);
+        if (drawer.isOpen()) drawer.close();
+        else if (keyCode == KeyEvent.KEYCODE_MENU && Apps.tilePkg(f) != null) f.performLongClick();
+        else openPreferences(f);
+        return true;
     }
 
     @Override public void onBackPressed() {
-        // Home is the bottom of the stack; Back only returns from the grid to the dock.
+        // Home is the bottom of the stack; Back only steps back through a drawer, or returns from
+        // the grid to the dock.
+        if (drawer.back()) return;
         if (scrollTarget > 0) focusDock(focusedIndex);
     }
 
@@ -312,7 +298,7 @@ public class MainActivity extends Activity {
         clp.setMargins(margin, Ui.dp(this, 28), 0, 0);
         first.addView(clock, clp);
 
-        // Top right: inputs and settings buttons, with the photo credit underneath.
+        // Top right: inputs, preferences and settings buttons, with the photo credit underneath.
         LinearLayout right = new LinearLayout(this);
         right.setOrientation(LinearLayout.VERTICAL);
         right.setGravity(Gravity.END);
@@ -320,6 +306,8 @@ public class MainActivity extends Activity {
         // On glass like the dock, each its own panel: they widen on focus.
         View inputs = Ui.labelButton(this, Ui.inputIcon(), "Inputs", glass(20));
         inputs.setOnClickListener(v -> openInputs());
+        View preferences = Ui.labelButton(this, Ui.tuneIcon(), Menus.PREFERENCES, glass(20));
+        preferences.setOnClickListener(this::openPreferences);
         View settings = Ui.labelButton(this, Ui.gearIcon(), "Settings", glass(20));
         settings.setOnClickListener(v -> startActivity(
                 new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
@@ -327,10 +315,13 @@ public class MainActivity extends Activity {
         Ui.endOfRow(inputs, View.FOCUS_LEFT);
         Ui.endOfRow(settings, View.FOCUS_RIGHT);
         buttons.addView(inputs);
-        LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-2, Ui.dp(this, 40));
-        gap.leftMargin = Ui.dp(this, 14);
-        buttons.addView(settings, gap);
+        for (View b : new View[] {preferences, settings}) {
+            LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-2, Ui.dp(this, 40));
+            gap.leftMargin = Ui.dp(this, 14);
+            buttons.addView(b, gap);
+        }
         backdrop.addPanel(inputs);
+        backdrop.addPanel(preferences);
         backdrop.addPanel(settings);
         // Wrap content, so each row hugs the right edge and the column resizes with the caption,
         // or with a button as it widens.
@@ -371,7 +362,7 @@ public class MainActivity extends Activity {
         dockScroll.setClipChildren(false);
         dockScroll.setClipToPadding(false);
         dockScroll.setFillViewport(true);
-        // No names under dock cards, so even padding centres them in the band.
+        // No names under dock cards, so even padding centers them in the band.
         dockScroll.setPadding(margin - inset, Ui.dp(this, 18), margin - inset, Ui.dp(this, 18));
         // A long dock scrolls sideways under the highlight; carry it along rather than chase.
         dockScroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> {
@@ -396,6 +387,11 @@ public class MainActivity extends Activity {
         grid.setPadding(margin, 0, margin, Ui.dp(this, 48));
         grid.setMinimumHeight(screen);
         content.addView(grid, new LinearLayout.LayoutParams(-1, -2));
+
+        // Preferences and the app menus slide in over everything, from the right.
+        drawer = new Drawer(this);
+        menus = new Menus(this, drawer);
+        root.addView(drawer, new FrameLayout.LayoutParams(-1, -1));
         return root;
     }
 
@@ -416,7 +412,7 @@ public class MainActivity extends Activity {
                 Apps.launch(this, app.pkg, opts);
             });
             tile.setOnLongClickListener(v -> {
-                editDock(app);
+                dockMenu(app, v);
                 return true;
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
@@ -456,7 +452,7 @@ public class MainActivity extends Activity {
                 Apps.launch(this, app.pkg, opts);
             });
             tile.setOnLongClickListener(v -> {
-                addToDock(app);
+                gridMenu(app, v);
                 return true;
             });
             // Down lands on the last tile of a shorter row, and stops at the bottom instead of
@@ -493,45 +489,67 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    private void addToDock(Apps.App app) {
-        List<String> choices = new ArrayList<>(Arrays.asList(ADD));
-        choices.addAll(Customize.tileItems(app.pkg));
-        if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
-        choices.add(Customize.HOME);
-        String[] items = choices.toArray(new String[0]);
-        dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(app.label)
-                .setItems(items, (d, which) -> {
-                    if (customize.onTileItem(app, items[which])) return;
-                    if (items[which].equals(UNINSTALL)) {
-                        Apps.uninstall(this, app.pkg);
-                        return;
-                    }
-                    List<String> pkgs = Apps.dock(this);
-                    pkgs.add(app.pkg);
-                    Apps.saveDock(this, pkgs);
-                    focusedPkg = app.pkg; // land on it in the dock
-                    buildDock();
-                })
-                .show();
+    /** A grid tile's menu: it can join the dock, at the end. */
+    private void gridMenu(Apps.App app, View tile) {
+        menus.app(app, p -> p.action(Ui.plusIcon(false), "Add to dock", null, () -> {
+            drawer.close();
+            List<String> pkgs = Apps.dock(this);
+            pkgs.add(app.pkg);
+            Apps.saveDock(this, pkgs);
+            focusedPkg = app.pkg; // land on it in the dock
+            buildDock();
+        }), () -> refocus(tile, app.pkg));
     }
 
-    /** What this launcher is, which version, and where it comes from. */
-    private void showAbout() {
-        String version = "";
-        try {
-            PackageInfo p = getPackageManager().getPackageInfo(getPackageName(), 0);
-            version = "Version " + p.versionName + ", installed "
-                    + DateFormat.getDateInstance(DateFormat.LONG).format(new Date(p.lastUpdateTime)) + "\n";
-        } catch (PackageManager.NameNotFoundException ignored) {
+    /**
+     * A dock tile's menu. Moving it keeps the drawer open, so it can move again, and the dock
+     * rearranges behind it.
+     */
+    private void dockMenu(Apps.App app, View tile) {
+        menus.app(app, p -> {
+            p.action(Ui.arrowIcon(true), "Move left", null, () -> moveInDock(app.pkg, -1));
+            p.action(Ui.arrowIcon(false), "Move right", null, () -> moveInDock(app.pkg, 1));
+            p.action(Ui.plusIcon(true), "Remove from dock", null, () -> {
+                drawer.close();
+                List<String> pkgs = Apps.dock(this);
+                pkgs.remove(app.pkg);
+                Apps.saveDock(this, pkgs);
+                buildDock();
+            });
+        }, () -> refocus(tile, app.pkg));
+    }
+
+    /** Swap an app with its neighbor in the dock, {@code by} -1 for left or 1 for right. */
+    private void moveInDock(String pkg, int by) {
+        List<String> pkgs = Apps.dock(this);
+        int pos = pkgs.indexOf(pkg);
+        if (pos < 0 || pos + by < 0 || pos + by >= pkgs.size()) return;
+        pkgs.add(pos + by, pkgs.remove(pos));
+        Apps.saveDock(this, pkgs);
+        focusedPkg = pkg; // focus follows it by package (see buildDock)
+        buildDock();
+    }
+
+    /** Preferences, from its button or a remote key; focus comes back to {@code from}. */
+    private void openPreferences(View from) {
+        menus.preferences(() -> refocus(from, Apps.tilePkg(from)));
+    }
+
+    /**
+     * Focus back where it was before a drawer opened: the same view, or if its row was rebuilt
+     * meanwhile, the same app's new tile; failing both, the dock.
+     */
+    private void refocus(View before, String pkg) {
+        if (before != null && before.isAttachedToWindow() && before.requestFocus()) return;
+        if (pkg != null) {
+            for (ViewGroup row : new ViewGroup[] {dock, grid}) {
+                for (int i = 0; i < row.getChildCount(); i++) {
+                    View tile = row.getChildAt(i);
+                    if (pkg.equals(tile.getTag()) && tile.requestFocus()) return;
+                }
+            }
         }
-        dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle("Google TV Home")
-                .setMessage("A minimal, ad-free home screen for Google TV.\n\n" + version
-                        + "Author: "+ AUTHOR +" <"+ AUTHOR_X +"> \n\n" + REPO + "\nMIT License")
-                .setPositiveButton("OK", null)
-                .setNeutralButton(Customize.HOME, (d, w) -> customize.home())
-                .show();
+        focusDock(focusedIndex);
     }
 
     /** Google TV's input switcher, the panel the remote's Input button opens. */
@@ -543,39 +561,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void editDock(Apps.App app) {
-        List<String> pkgs = Apps.dock(this);
-        int pos = pkgs.indexOf(app.pkg);
-        List<String> choices = new ArrayList<>(Arrays.asList(LEFT, RIGHT, REMOVE));
-        choices.addAll(Customize.tileItems(app.pkg));
-        if (Apps.canUninstall(this, app.pkg)) choices.add(UNINSTALL);
-        choices.add(Customize.HOME);
-        String[] items = choices.toArray(new String[0]);
-        dialog = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(app.label)
-                .setItems(items, (d, which) -> {
-                    String item = items[which];
-                    if (customize.onTileItem(app, item)) return;
-                    if (item.equals(UNINSTALL)) {
-                        Apps.uninstall(this, app.pkg);
-                        return;
-                    }
-                    // Focus follows a moved app by package (see buildDock).
-                    if (item.equals(LEFT) && pos > 0) {
-                        pkgs.add(pos - 1, pkgs.remove(pos));
-                    } else if (item.equals(RIGHT) && pos < pkgs.size() - 1) {
-                        pkgs.add(pos + 1, pkgs.remove(pos));
-                    } else if (item.equals(REMOVE)) {
-                        pkgs.remove(pos);
-                    }
-                    Apps.saveDock(this, pkgs);
-                    buildDock();
-                })
-                .show();
-    }
-
+    /** Focus a dock tile, unless a drawer has focus: the dock rebuilds behind one as apps move. */
     private void focusDock(int index) {
-        if (index < 0 || index >= dock.getChildCount()) return;
+        if (drawer.isOpen() || index < 0 || index >= dock.getChildCount()) return;
         View v = dock.getChildAt(index);
         v.post(v::requestFocus);
     }
@@ -611,7 +599,7 @@ public class MainActivity extends Activity {
 
     /**
      * Down the page towards the grid, the photo darkens, and the dock's band and the now-playing
-     * card fade away. The darkening is a colour filter on the photo, which costs nothing extra to
+     * card fade away. The darkening is a color filter on the photo, which costs nothing extra to
      * draw; a dark view over it would cover the whole screen with another layer.
      */
     private void onScroll(int y) {
@@ -637,7 +625,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** A tile's card as it looks focused (scaled up from its centre), in page coordinates. */
+    /** A tile's card as it looks focused (scaled up from its center), in page coordinates. */
     private RectF cardRect(View tile) {
         RectF r = new RectF(rectIn(((ViewGroup) tile).getChildAt(0)));
         float grow = (Ui.FOCUS_SCALE - 1) / 2;
@@ -666,28 +654,28 @@ public class MainActivity extends Activity {
 
     // --- Wallpapers ---
 
-    /** The background picked in Customize home: photos from some categories, or a plain colour. */
+    /** The background picked in Preferences: photos from some categories, or a plain color. */
     private void loadBackground() {
-        plain = Wallpapers.colour(this);
+        plain = Wallpapers.color(this);
         walls.clear();
         if (plain == null) walls.addAll(Wallpapers.chosen(this));
     }
 
-    /** The next photo, after the wait picked in Customize home. None for a plain colour, or Never. */
+    /** The next photo, after the wait picked in Preferences. None for a plain color, or Never. */
     private void scheduleRotate() {
         main.removeCallbacks(rotate);
         int minutes = Wallpapers.minutes(this);
         if (plain == null && minutes > 0 && walls.size() > 1) main.postDelayed(rotate, minutes * 60_000L);
     }
 
-    /** Decode off the main thread (or draw the plain colour), then crossfade. */
+    /** Decode off the main thread (or draw the plain color), then crossfade. */
     private void showWallpaper(int index, boolean fade) {
-        final Palette.Swatch colour = plain;
-        if (colour == null && walls.isEmpty()) return;
-        final int i = colour != null ? wall : ((index % walls.size()) + walls.size()) % walls.size();
-        final String[] w = colour != null ? null : walls.get(i);
+        final Palette.Swatch color = plain;
+        if (color == null && walls.isEmpty()) return;
+        final int i = color != null ? wall : ((index % walls.size()) + walls.size()) % walls.size();
+        final String[] w = color != null ? null : walls.get(i);
         decoder.execute(() -> {
-            Bitmap bmp = w == null ? Wallpapers.plain(colour) : Wallpapers.decode(this, w[0]);
+            Bitmap bmp = w == null ? Wallpapers.plain(color) : Wallpapers.decode(this, w[0]);
             Bitmap blurred = bmp == null ? null : Glass.Backdrop.blur(bmp);
             if (bmp != null) {
                 // Upload to the GPU now, rather than in the first frame of the crossfade.

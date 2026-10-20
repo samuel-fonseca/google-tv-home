@@ -19,7 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Screensaver: the home screen's photos, from the categories picked in Customize home, crossfading
+ * Screensaver: the home screen's photos, from the categories picked in Preferences, crossfading
  * every minute, with the time and the photo credit. The clock moves to a new spot each minute so nothing burns in. Any key wakes the TV.
  */
 public class WallpaperDream extends DreamService {
@@ -50,7 +50,7 @@ public class WallpaperDream extends DreamService {
         super.onAttachedToWindow();
         setInteractive(false);
         setFullscreen(true);
-        walls = Wallpapers.chosen(this); // photos even when home has a plain colour
+        walls = Wallpapers.chosen(this); // photos even when home has a plain color
         wall = walls.isEmpty() ? 0 : random.nextInt(walls.size());
         setContentView(buildLayout());
     }

@@ -2,6 +2,8 @@ package io.github.samuelfonseca.tvhome;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -37,7 +39,7 @@ class ListsTest {
 
     @Test void wallpapersSkipMalformedLines() throws IOException {
         List<String[]> got = Lists.wallpapers(text(
-                "\nwall_01|Place|Author|Licence\nwall_02|a|b|c|d|e\nwall_03|a|b|c|d\n"));
+                "\nwall_01|Place|Author|License\nwall_02|a|b|c|d|e\nwall_03|a|b|c|d\n"));
         assertEquals(1, got.size());
         assertEquals("wall_03", got.get(0)[0]);
     }
@@ -61,5 +63,30 @@ class ListsTest {
     @Test void inCategoriesFallsBackToEverything() {
         assertEquals(WALLS, Lists.inCategories(WALLS, Set.of()));
         assertEquals(WALLS, Lists.inCategories(WALLS, Set.of("Deserts"))); // a category since removed
+    }
+
+    private static final List<String> CATEGORIES = List.of("Lakes", "Forests", "Coasts");
+
+    @Test void tickedWhenChosenOrNoneAre() {
+        assertTrue(Lists.ticked(CATEGORIES, Set.of(), "Lakes"));
+        assertTrue(Lists.ticked(CATEGORIES, Set.of("Deserts"), "Lakes")); // only gone ones: all show
+        assertTrue(Lists.ticked(CATEGORIES, Set.of("Lakes"), "Lakes"));
+        assertFalse(Lists.ticked(CATEGORIES, Set.of("Lakes"), "Coasts"));
+    }
+
+    @Test void untickingFromAllKeepsTheRest() {
+        assertEquals(Set.of("Forests", "Coasts"), Lists.toggle(CATEGORIES, Set.of(), "Lakes"));
+    }
+
+    @Test void tickingTheLastOneSavesNone() {
+        assertEquals(Set.of(), Lists.toggle(CATEGORIES, Set.of("Lakes", "Forests"), "Coasts"));
+    }
+
+    @Test void theLastTickedStaysTicked() {
+        assertEquals(Set.of("Lakes"), Lists.toggle(CATEGORIES, Set.of("Lakes"), "Lakes"));
+    }
+
+    @Test void tickingAddsToTheChosen() {
+        assertEquals(Set.of("Lakes", "Coasts"), Lists.toggle(CATEGORIES, Set.of("Lakes"), "Coasts"));
     }
 }

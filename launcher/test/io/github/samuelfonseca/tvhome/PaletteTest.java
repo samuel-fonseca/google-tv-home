@@ -24,14 +24,14 @@ class PaletteTest {
         assertFalse(Palette.has(Palette.BACKGROUNDS, null));
     }
 
-    /** Input tiles kept their old blue as the default, so nothing changes until you pick a colour. */
+    /** Input tiles kept their old blue as the default, so nothing changes until you pick a color. */
     @Test void defaultTileIsTheOriginalBlue() {
         Palette.Swatch blue = Palette.TILES.get(0);
         assertEquals(0xFF00246B, blue.from);
         assertEquals(0xFF0070D1, blue.to);
     }
 
-    @Test void namesAreUniqueAndColoursOpaque() {
+    @Test void namesAreUniqueAndColorsOpaque() {
         for (List<Palette.Swatch> list : List.of(Palette.TILES, Palette.BACKGROUNDS)) {
             Set<String> names = new HashSet<>(List.of(Palette.names(list)));
             assertEquals(list.size(), names.size(), "duplicate swatch name");

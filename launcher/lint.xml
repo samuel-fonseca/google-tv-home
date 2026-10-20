@@ -7,7 +7,7 @@
     </issue>
     <!-- The launcher is English-only; there are no string resources to translate. -->
     <issue id="SetTextI18n" severity="ignore" />
-    <!-- The TV runs Android 14 (API 34). A newer targetSdk changes app behaviour with no device to
+    <!-- The TV runs Android 14 (API 34). A newer targetSdk changes app behavior with no device to
          test it on; and whether lint flags 34 depends on which platforms the SDK has installed. -->
     <issue id="OldTargetApi" severity="ignore" />
     <!-- NowPlaying and Highlight are only created in code, never inflated from XML. -->
