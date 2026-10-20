@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
     private boolean scrolling;
     private long lastScrollFrame;
     private int scrollTarget;
+    private float scrolled, shaded; // how far down to the grid, and how far in a drawer is: 0..1
     private NowPlaying nowPlaying;
     private Drawer drawer;
     private Menus menus;
@@ -389,7 +390,10 @@ public class MainActivity extends Activity {
         content.addView(grid, new LinearLayout.LayoutParams(-1, -2));
 
         // Preferences and the app menus slide in over everything, from the right.
-        drawer = new Drawer(this);
+        drawer = new Drawer(this, in -> {
+            shaded = in;
+            dimWallpaper();
+        });
         menus = new Menus(this, drawer);
         root.addView(drawer, new FrameLayout.LayoutParams(-1, -1));
         return root;
@@ -604,21 +608,30 @@ public class MainActivity extends Activity {
 
     /**
      * Down the page towards the grid, the photo darkens, and the dock's band and the now-playing
-     * card fade away. The darkening is a color filter on the photo, which costs nothing extra to
-     * draw; a dark view over it would cover the whole screen with another layer.
+     * card fade away.
      */
     private void onScroll(int y) {
-        float p = Math.min(1f, y / (float) Math.max(1, gridScroll()));
-        int dim = Math.round(255 * p * 0.85f);
-        for (ImageView iv : new ImageView[] {back, front}) {
-            if (dim == 0) iv.clearColorFilter();
-            else iv.setColorFilter(dim << 24 | DIM, PorterDuff.Mode.SRC_ATOP);
-        }
+        float p = scrolled = Math.min(1f, y / (float) Math.max(1, gridScroll()));
+        dimWallpaper();
         topScrim.setAlpha(1 - p);
         bottomScrim.setAlpha(1 - p);
         bandBg.setAlpha(Math.round(255 * (1 - p))); // in the grid the dock is just the top row
         nowPlaying.setAlpha(1 - p); // it sits just above the dock, so it would peek in at the top
         backdrop.redraw(); // the panels moved over the wallpaper
+    }
+
+    /**
+     * Darken the photo down the page and behind an open drawer. A color filter on the photo, which
+     * costs nothing extra to draw; a dark view over it would cover the whole screen with another
+     * layer.
+     */
+    private void dimWallpaper() {
+        float d = 1 - (1 - 0.85f * scrolled) * (1 - 0.6f * shaded);
+        int dim = Math.round(255 * d);
+        for (ImageView iv : new ImageView[] {back, front}) {
+            if (dim == 0) iv.clearColorFilter();
+            else iv.setColorFilter(dim << 24 | DIM, PorterDuff.Mode.SRC_ATOP);
+        }
     }
 
     /** The highlight springs to a focused tile, and fades out anywhere else. */

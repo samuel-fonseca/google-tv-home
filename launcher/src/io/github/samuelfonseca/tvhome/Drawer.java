@@ -39,6 +39,11 @@ final class Drawer extends FrameLayout {
         void fill(Page page);
     }
 
+    /** Hears how far in the panel is as it slides, 0 to 1, to shade the screen behind it. */
+    interface Shade {
+        void shade(float in);
+    }
+
     // Google TV's panel: slate rows on a darker sheet, the focused row near white.
     private static final int SHEET = 0xFF1F232A, ROW = 0xFF2A2F37, LIT = 0xFFE3EEFC;
     private static final int CHIP = 0xFF1A1E24, CHIP_LIT = 0xFF0B4F7C, ICON_LIT = 0xFFD3E3FD;
@@ -48,7 +53,6 @@ final class Drawer extends FrameLayout {
     private static final long SLIDE_MS = 240, TURN_MS = 180;
     private static final DecelerateInterpolator EASE = new DecelerateInterpolator(2f);
 
-    private final View scrim;
     private final FrameLayout sheet;
     private final int width, margin;
     private final List<Entry> stack = new ArrayList<>();
@@ -68,17 +72,15 @@ final class Drawer extends FrameLayout {
         }
     }
 
-    Drawer(Context ctx) {
+    /**
+     * @param shade darkens what's behind the panel. Not a scrim over the screen: on the TV's GPU, a
+     *     full-screen fill fading in made the slide drop frames.
+     */
+    Drawer(Context ctx, Shade shade) {
         super(ctx);
         setVisibility(GONE);
         width = Ui.dp(ctx, 272);
         margin = Ui.dp(ctx, 16);
-        // Shades the screen towards the panel so it stands off a bright photo; the left stays clear.
-        scrim = new View(ctx);
-        scrim.setBackground(new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[] {0x26000000, 0xB3000000}));
-        scrim.forceHasOverlappingRendering(false); // so fading it doesn't draw it offscreen first
-        addView(scrim, new LayoutParams(-1, -1));
         sheet = new FrameLayout(ctx);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(SHEET);
@@ -87,6 +89,7 @@ final class Drawer extends FrameLayout {
         LayoutParams lp = new LayoutParams(width, -1, Gravity.END);
         lp.setMargins(0, margin, margin, margin);
         addView(sheet, lp);
+        sheet.animate().setUpdateListener(a -> shade.shade(1 - sheet.getTranslationX() / (width + margin)));
     }
 
     boolean isOpen() {
@@ -109,13 +112,8 @@ final class Drawer extends FrameLayout {
         show(0);
         if (shown) return;
         sheet.animate().cancel();
-        scrim.animate().cancel();
-        if (hidden) {
-            sheet.setTranslationX(width + margin);
-            scrim.setAlpha(0f);
-        }
+        if (hidden) sheet.setTranslationX(width + margin);
         sheet.animate().translationX(0).setDuration(SLIDE_MS).setInterpolator(EASE).start();
-        scrim.animate().alpha(1f).setDuration(SLIDE_MS).start();
     }
 
     /** Open another page over this one; Back returns to the row that opened it. */
@@ -168,7 +166,6 @@ final class Drawer extends FrameLayout {
                     sheet.removeAllViews();
                     page = null;
                 }).start();
-        scrim.animate().alpha(0f).setDuration(SLIDE_MS).start();
     }
 
     /** Build the top page and focus its row, then drop the old page, nudged in from {@code direction}. */
