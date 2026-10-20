@@ -573,6 +573,20 @@ final class Ui {
         };
     }
 
+    /** A crescent moon: "screensaver". */
+    static Drawable moonIcon() {
+        return new IconDrawable() {
+            @Override void draw(Canvas c, float w, float h) {
+                paint.setStyle(Paint.Style.FILL);
+                Path moon = new Path(), bite = new Path();
+                moon.addCircle(w * 0.46f, h * 0.54f, w * 0.4f, Path.Direction.CW);
+                bite.addCircle(w * 0.72f, h * 0.32f, w * 0.34f, Path.Direction.CW);
+                moon.op(bite, Path.Op.DIFFERENCE);
+                c.drawPath(moon, paint);
+            }
+        };
+    }
+
     /** A drop of paint: "color". */
     static Drawable dropIcon() {
         return new IconDrawable() {

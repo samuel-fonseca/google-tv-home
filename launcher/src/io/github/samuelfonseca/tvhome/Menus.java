@@ -14,13 +14,14 @@ import java.util.Set;
 
 /**
  * What the drawers list. Preferences: the background, its photo categories and how often it
- * changes, with what this launcher is at the foot. An app's menu: what the home screen can do
+ * changes, and the screensaver, with what this launcher is at the foot. An app's menu: what the home screen can do
  * with its tile, an input's icon and color, App info and Uninstall. Choices save straight to the
  * preferences; the home screen listens for them and redraws what changed.
  */
 final class Menus {
     static final String PREFERENCES = "Preferences";
     private static final String PHOTOS = "Photos";
+    private static final String[] SCREENSAVERS = {"Home photos", "The TV's own", "Off"};
     private static final String[] EVERY = {"Every minute", "Every 5 minutes", "Every 15 minutes", "Every hour", "Never"};
     private static final String AUTHOR = "Sam Fonseca · @oneofthesamuels";
     private static final String REPO = "github.com/samuel-fonseca/google-tv-home";
@@ -47,6 +48,13 @@ final class Menus {
             p.link(Ui.clockIcon(), "Change photo", EVERY[indexOf(Wallpapers.MINUTES, Wallpapers.minutes(ctx))],
                     this::intervals);
         }
+        p.divider();
+        if (Screensaver.canSet(ctx)) {
+            p.link(Ui.moonIcon(), "Screensaver", SCREENSAVERS[Screensaver.current(ctx)], this::screensavers);
+        } else {
+            // Only adb can grant the permission; say how rather than hide the choice.
+            p.action(Ui.moonIcon(), "Screensaver", "Run tools/set-home.sh to choose", () -> {});
+        }
         p.note("Google TV Home", "A minimal, ad-free home screen.\n" + version() + "\n" + AUTHOR + "\n"
                 + REPO + "\nMIT License");
     }
@@ -58,6 +66,19 @@ final class Menus {
         for (Palette.Swatch s : Palette.BACKGROUNDS) {
             p.choice(swatch(s), s.name, null, () -> Wallpapers.color(ctx) == s,
                     () -> Wallpapers.setColor(ctx, s.name));
+        }
+    }
+
+    /**
+     * This launcher's photos, the TV's own screensaver, or none.
+     * When it starts is up to the TV's Settings.
+     */
+    private void screensavers(Drawer.Page p) {
+        String[] about = {"Your photos, with the time", "Google TV's ambient mode", null};
+        for (int i = 0; i < SCREENSAVERS.length; i++) {
+            int which = i;
+            p.choice(null, SCREENSAVERS[i], about[i], () -> Screensaver.current(ctx) == which,
+                    () -> Screensaver.set(ctx, which));
         }
     }
 

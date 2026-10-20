@@ -32,7 +32,7 @@ TV back the way it was.
   changes, or a plain dark color instead.
 - **Input tiles your way:** give an HDMI input an icon (input, HDMI port, game console, set-top box, disc player,
   computer, or none) and a color.
-- **Screensaver** (optional): the same photos crossfading, with the time and date.
+- **Screensaver** (optional, in Preferences): the same photos crossfading, with the time and date.
 - **Quick access** to the input switcher, Preferences and Settings, top right; each spells out
   its name when focused.
 - **Side drawers** in the style of Google TV's own panels: Preferences and each app's menu slide
@@ -91,7 +91,9 @@ updates must be signed with the same key, or the old build has to be uninstalled
 - **Wallpapers:** photos and their categories are listed in `launcher/res/raw/walls.txt`, with
   credits in [`launcher/WALLPAPERS.md`](launcher/WALLPAPERS.md).
 - **Default dock:** edit `launcher/res/raw/dock.txt`. Changes made on the TV override it.
-- **Screensaver:** turn it on with
+- **Screensaver:** pick *Home photos* under *Preferences > Screensaver*, or go back to the TV's
+  own or turn it off. When it starts is still set in the TV's Settings. Without
+  `tools/set-home.sh`, which grants the permission, turn it on over adb instead:
   ```sh
   adb shell settings put secure screensaver_components io.github.samuelfonseca.tvhome/.WallpaperDream
   ```
