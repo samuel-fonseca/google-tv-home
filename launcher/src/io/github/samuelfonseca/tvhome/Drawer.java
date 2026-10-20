@@ -58,7 +58,9 @@ final class Drawer extends FrameLayout {
     private static final class Entry {
         final String title;
         final Content content;
-        int focused; // the row to come back to from a page it opened
+        // The row to come back to from a page it opened, or after a reload: by name, else by place.
+        String focusedName;
+        int focused;
 
         Entry(String title, Content content) {
             this.title = title;
@@ -118,9 +120,26 @@ final class Drawer extends FrameLayout {
 
     /** Open another page over this one; Back returns to the row that opened it. */
     void push(String title, Content content) {
-        stack.get(stack.size() - 1).focused = page.focusedRow();
+        remember();
         stack.add(new Entry(title, content));
         show(1);
+    }
+
+    /**
+     * Build the page again in place, as when what it lists has changed, staying on the same row.
+     * If that row has gone, the one before it.
+     */
+    void reload() {
+        if (!isOpen()) return;
+        remember();
+        show(0);
+        page.settle();
+    }
+
+    private void remember() {
+        Entry e = stack.get(stack.size() - 1);
+        e.focused = page.focusedRow();
+        e.focusedName = page.focusedName();
     }
 
     /** Back a page, or close from the first. False if it wasn't open. */
@@ -161,7 +180,7 @@ final class Drawer extends FrameLayout {
         sheet.addView(page.view, new LayoutParams(-1, -1));
         // Focus moves before the old page goes: removing a focused view hands focus to the first
         // focusable in the window, which could scroll the home screen.
-        page.focus(e.focused);
+        page.focus(e.focusedName, e.focused);
         if (old != null) sheet.removeView(old.view);
         if (direction != 0) {
             page.view.setTranslationX(direction * Ui.dp(getContext(), 24));
@@ -198,7 +217,7 @@ final class Drawer extends FrameLayout {
             list.setOrientation(LinearLayout.VERTICAL);
             // Room at the sides and ends for a focused row to grow into.
             list.setPadding(dp(12), dp(4), dp(12), dp(12));
-            list.setClipChildren(false);
+            list.setClipToPadding(false);
             scroll.addView(list, new LayoutParams(-1, -2));
             view.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
         }
@@ -346,8 +365,29 @@ final class Drawer extends FrameLayout {
             return 0;
         }
 
-        void focus(int index) {
-            if (!rows.isEmpty()) rows.get(Math.min(index, rows.size() - 1)).view.requestFocus();
+        String focusedName() {
+            return String.valueOf(rows.get(focusedRow()).view.getContentDescription());
+        }
+
+        /** The row called {@code name}; without one, the row before {@code index}. */
+        void focus(String name, int index) {
+            if (rows.isEmpty()) return;
+            for (Row r : rows) {
+                if (r.view.getContentDescription().toString().equals(name)) {
+                    r.view.requestFocus();
+                    return;
+                }
+            }
+            int i = name == null ? index : index - 1;
+            rows.get(Math.max(0, Math.min(i, rows.size() - 1))).view.requestFocus();
+        }
+
+        /** Lift the focused row at once, as it was before a reload, rather than grow it again. */
+        void settle() {
+            View f = rows.get(focusedRow()).view;
+            f.animate().cancel();
+            f.setScaleX(LIFT);
+            f.setScaleY(LIFT);
         }
 
         private TextView text(String s, float sp, int color) {

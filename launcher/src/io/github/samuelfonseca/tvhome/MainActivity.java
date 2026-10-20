@@ -507,13 +507,17 @@ public class MainActivity extends Activity {
      */
     private void dockMenu(Apps.App app, View tile) {
         menus.app(app, p -> {
-            p.action(Ui.arrowIcon(true), "Move left", null, () -> moveInDock(app.pkg, -1));
-            p.action(Ui.arrowIcon(false), "Move right", null, () -> moveInDock(app.pkg, 1));
+            List<String> pkgs = Apps.dock(this);
+            int pos = pkgs.indexOf(app.pkg);
+            if (pos > 0) p.action(Ui.arrowIcon(true), "Move left", null, () -> moveInDock(app.pkg, -1));
+            if (pos < pkgs.size() - 1) {
+                p.action(Ui.arrowIcon(false), "Move right", null, () -> moveInDock(app.pkg, 1));
+            }
             p.action(Ui.plusIcon(true), "Remove from dock", null, () -> {
                 drawer.close();
-                List<String> pkgs = Apps.dock(this);
-                pkgs.remove(app.pkg);
-                Apps.saveDock(this, pkgs);
+                List<String> rest = Apps.dock(this);
+                rest.remove(app.pkg);
+                Apps.saveDock(this, rest);
                 buildDock();
             });
         }, () -> refocus(tile, app.pkg));
@@ -528,6 +532,7 @@ public class MainActivity extends Activity {
         Apps.saveDock(this, pkgs);
         focusedPkg = pkg; // focus follows it by package (see buildDock)
         buildDock();
+        drawer.reload(); // at either end, one of the moves goes
     }
 
     /** Preferences, from its button or a remote key; focus comes back to {@code from}. */
